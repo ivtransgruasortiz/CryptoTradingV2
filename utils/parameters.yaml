@@ -1,0 +1,87 @@
+# PARAMETERS
+crypto_trading_db: 'crypto_trading_db'
+whatsapp_twilio_db: 'whatsapp_twilio_db'
+mail_db: 'mail_db'
+twitter_db: 'twitter_db'
+
+grafica: False # true para que pinte grafica, false para que no la pinte
+nummax: 9999999 # Inicializacion listas
+stoplossmarker: False # Para activar el stoploss poner a True (le entra a la funcion stoploss para activarla)
+stoptrigger: False  # Para marcar si estamos en situación de stoploss y poder cambiar condiciones de compra y venta
+trigger_twitter: True # Para activar/desactivar mandar twitts en twitter
+porcentaje_limite_stoploss: 0.2 # porcentaje de caída para stoploss - ideal 0.20
+inversion_fija_eur: 2000 # cantidad en eur maximo por operación
+#inversion_fija_eur: 10 #Para TEST
+
+#crypto: "LTC-EUR" # producto
+#crypto: "ADA-EUR" # producto
+#crypto: "DOGE-EUR" # producto
+crypto: "XTZ-EUR" # producto
+
+api_url: 'https://api.pro.coinbase.com/' # url de la api
+
+t_limit_percentile: 28800 # tiempo hacia atrás en segundos para calcular los percentiles
+pmax: 50 # percentil superior seguridad - ideal 50
+pmin: 10 # percentil inferior seguridad - ideal 20
+margenmax: 0.15 # Margen limite alrededor del maximo historico para operar con seguridad - ideal 0.1
+margentramo: 0.05 # Margen limite alrededor de cada maximo
+
+time_percen_dicc: { tiempo_caida_max: 900, # tiempo máximo de caida en segundos - si estamos rozando maximos historicos - ideal 600
+                    porcentaje_caida_max: 0.05, # porcentaje de caída minimo necesario para la compra - si estamos rozando maximos historicos - ideal = 0.06
+                    tiempo_caida_1: 7200, # tiempo máximo de caida en segundos - ideal 120min = 7200seg
+                    porcentaje_caida_1: 0.04, # porcentaje de caída minimo necesario para la compra - ideal 0.04
+                    tiempo_caida_2: 1800, # tiempo máximo de caida en segundos - ideal 120min = 7200seg
+                    porcentaje_caida_2: 0.03, # porcentaje de caída minimo necesario para la compra - ideal 0.04
+                    tiempo_caida_min: 1200, # tiempo máximo de caida en segundos - si estamos en condiciones ideales 900 seg
+                    porcentaje_caida_min: 0.02, # porcentaje de caída minimo necesario para la compra - si estamos en condiciones ideales - ideal 0.05
+                    tiempo_caida_stop: 7200, # tiempo stop de caida en segundos - si estamos en situacion de stoploss
+                    porcentaje_caida_stop: 0.07, # porcentaje de caída minimo necesario para la compra - si estamos en situacion de stoploss
+                    porcentaje_beneficio_max: 0.02, # porcentaje mínimo de beneficio en situacion ideal - ideal 0.02
+                    porcentaje_beneficio_min: 0.015 # porcentaje mínimo de beneficio en situacion extrema, para minimizar riesgo 0.015
+}
+
+pag_historic: 50 # paginas para contar hacia atras y reconstruir historico, cada pag son 100 resultados - ideal 50
+freq_exec: 0.5 # frecuencia máxima de ejecución por ciclo Hz - ideal 0.5
+contador_ciclos: 0 # contador de ciclos
+factor_tamanio: 100 # factor por el que multiplicar el numero de ciclos para limitar tamanio listas
+
+n_rapida_bids: 15 # intervalo para el calculo de la media rapida en los bids (compras) utilizado en nuestras ventas de cripto - ideal 15
+n_lenta_bids: 30 # intervalo para el calculo de la media lenta en los bids (compras) utilizado en nuestras ventas de cripto - ideal 60
+n_rapida_asks: 30 # intervalo para el calculo de la media rapida en los asks (ventas) utilizado en nuestras compras de cripto - 10
+n_lenta_asks: 90 # intervalo para el calculo de la media lenta en los bids (ventas) utilizado en nuestras compras de cripto - 40
+n_media: 10 # Numero de valores para calcular la media en los porcetajes_variacion_tiempo
+
+## Inversion por tramos
+trigger_tramos: True # Para activar la inversion por tramos
+n_tramos: 4
+redefinicion_max: True # Para activar la redefinicion del maximo segun tramos
+
+## Lista csv e inversion fija mensual ##
+activacion_inversion_fija: False # Boolean para activar o desactivar la inversion mensual fija
+eur_inversion: 100 # euros de inversion fija mensual
+dicc_crypto: { 'BTC-EUR': 0.15,
+               'ETH-EUR': 0.15,
+               'ADA-EUR': 0.15,
+               'SOL-EUR': 0.1,
+               'DOT-EUR': 0.1,
+               'XTZ-EUR': 0.1,
+               'LINK-EUR': 0.04,
+               'XLM-EUR': 0.04,
+               'LTC-EUR': 0.05,
+               'OMG-EUR': 0.04,
+               'UMA-EUR': 0.04,
+               'EOS-EUR': 0.04
+}
+
+lista_criptos_csv: ['BTC-EUR',
+                    'ETH-EUR',
+                    'ADA-EUR',
+                    'LINK-EUR',
+                    'OMG-EUR',
+                    'UMA-EUR',
+                    'XLM-EUR',
+                    'XTZ-EUR',
+                    'EOS-EUR',
+                    'LTC-EUR',
+                    'BCH-EUR'
+]
