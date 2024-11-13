@@ -1,0 +1,17 @@
+# New general Scaffolder
+pylint==3.3.1
+pytest
+click
+black==24.10.0
+pytest-cov
+
+# Specific libraries
+requests==2.32.3
+twilio==9.3.6
+PyYAML>=5.4
+pandas
+numpy
+scipy
+tqdm==4.67.0
+matplotlib
+tweepy==4.14.0
