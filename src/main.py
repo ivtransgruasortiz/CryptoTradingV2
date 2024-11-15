@@ -31,11 +31,14 @@ import tweepy
 
 import logging
 
+import http.client
+
 import utils.constants as cons
 from utils.functions import ema, tiempo_pausa_new, CoinbaseExchangeAuth, buy_sell, condiciones_buy_sell, \
     medias_exp, df_medias_bids_asks, pintar_grafica, limite_tamanio, limite_tamanio_df, historic_df, \
     disposiciones_iniciales, stoploss, automated_mail, automated_whatsapp, toma_1, fechas_time, \
     porcentaje_variacion_inst_tiempo, percentil, tramo_inv, trigger_list_last_buy, random_name, bool_compras_previas
+
 
 if __name__ == "__main__":
     logging \
@@ -75,7 +78,9 @@ if __name__ == "__main__":
             - local_execution: {local_execution}"""
     )
 
-
+    API_KEY = str(os.environ.get('API_KEY'))
+    PASSPHRASE = str(os.environ.get('PASSPHRASE'))
+    SECRET_KEY = str(os.environ.get('SECRET_KEY'))
 
 
 
