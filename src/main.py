@@ -70,6 +70,12 @@ if __name__ == "__main__":
         # list_months = sys.argv[1]
         # kind_cross = sys.argv[2]
 
+    print(
+        f"""\nRunning with arguments:
+            - local_execution: {local_execution}"""
+    )
+
+
 
 
 
