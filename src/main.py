@@ -113,6 +113,8 @@ if __name__ == "__main__":
 
     uri = f"{request_method} {request_host}{request_path}"
     jwt_token = build_jwt(api_key, api_secret, uri)
+    # CON SDK (no funciona bien)
+    jwt_token = jwt_generator.build_ws_jwt(api_key, api_secret)
 
     conn = http.client.HTTPSConnection(request_host)
     payload = ''
