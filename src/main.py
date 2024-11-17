@@ -1,44 +1,28 @@
 import ast
-import sys
-import os
-
-import time
-import requests as rq
-import math
-import datetime
-import dateutil.parser
-from dateutil import tz
-from dateutil.tz import *
-import yaml
-import pandas as pd
-import numpy as np
-
-import json
-import smtplib
-import ssl
-import matplotlib.pyplot as plt
-from string import ascii_lowercase
-import random
-
-from statistics import mean
-from scipy import stats
-
-from smtplib import SMTPException
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from twilio.rest import Client as client_whatsapp_twilio
-import tweepy
-
 import logging
+import math
+import os
+import ssl
+import sys
+import time
 
+import yaml
+
+from coinbase.rest import RESTClient
+import hmac, hashlib, base64
+import requests as rq
+from requests.auth import AuthBase
 import http.client
+import json
+
+import jwt
+from coinbase import jwt_generator
+from cryptography.hazmat.primitives import serialization
+import time
+import secrets
 
 import utils.constants as cons
-from utils.functions import ema, tiempo_pausa_new, CoinbaseExchangeAuth, buy_sell, condiciones_buy_sell, \
-    medias_exp, df_medias_bids_asks, pintar_grafica, limite_tamanio, limite_tamanio_df, historic_df, \
-    disposiciones_iniciales, stoploss, automated_mail, automated_whatsapp, toma_1, fechas_time, \
-    porcentaje_variacion_inst_tiempo, percentil, tramo_inv, trigger_list_last_buy, random_name, bool_compras_previas
-
+from utils.functions import disposiciones_iniciales, historic_df, CoinbaseExchangeAuth
 
 if __name__ == "__main__":
     logging \
@@ -78,18 +62,126 @@ if __name__ == "__main__":
             - local_execution: {local_execution}"""
     )
 
-    API_KEY = str(os.environ.get('API_KEY'))
-    PASSPHRASE = str(os.environ.get('PASSPHRASE'))
-    SECRET_KEY = str(os.environ.get('SECRET_KEY'))
+    api_key = str(os.environ.get('API_KEY'))
+    api_secret = str(os.environ.get('API_SECRET')) \
+        .replace("\\n", "\n")
+
+    # # Parametros iniciales
+    crypto = param['crypto']
+    crypto_short = crypto.split('-')[0]
+    trigger_tramos = param['trigger_tramos']
+    n_tramos = param['n_tramos']
+    inversion_fija_eur = param['inversion_fija_eur']
+    api_url = param['api_url']
+    t_limit_percentile = param['t_limit_percentile']
+    pmax = param['pmax']
+    pmin = param['pmin']
+    margenmax = param['margenmax']
+    margentramo = param['margentramo']
+    time_percen_dicc = param['time_percen_dicc']
+    pag_historic = param['pag_historic']
+    freq_exec = param['freq_exec']
+    contador_ciclos = param['contador_ciclos']
+    tamanio_listas_min = freq_exec * time_percen_dicc['tiempo_caida_1']
+    factor_tamanio = param['factor_tamanio']
+    ordenes_lanzadas = []
+    n_rapida_bids = param['n_rapida_bids']
+    n_lenta_bids = param['n_lenta_bids']
+    n_rapida_asks = param['n_rapida_asks']
+    n_lenta_asks = param['n_lenta_asks']
+    n_media = param['n_media']
+    grafica = param['grafica']
+    nummax = param['nummax']
+    redefinicion_max = param['redefinicion_max']
+
+    #########################
+    # #### CONSULTAS #######
+    #########################
+
+    # # FORMA 1 - CON SDK (Software Development Kit)
+    client = RESTClient(api_key=api_key, api_secret=api_secret)
+    accounts = client.get_accounts()[cons.ACCOUNTS]
+    accounts_crypto = [x["available_balance"] for x in accounts if x["available_balance"]["value"] != "0"]
+    # Disp_iniciales - OPCIONAL SOLO POR INFORMACION
+    disp_ini = disposiciones_iniciales(client)
+
+    # # FORMA 2 - CON API-REST
+    key_name = api_key
+    key_secret = api_secret \
+        .replace("\\n", "\n")
+    request_method = "GET"
+    request_path = "/v2/accounts"
+
+    # Construir TOKEN JWT
+    # CONS SDK
+    def main():
+        jwt_uri = jwt_generator.format_jwt_uri(request_method, request_path)
+        jwt_token = jwt_generator.build_rest_jwt(jwt_uri, api_key, api_secret)
+        print(f"export JWT={jwt_token}")
+        return jwt_token
+
+
+    JWT = main()
+
+    # # NORMAL
+    # request_host = "api.coinbase.com"
+    #
+    # def build_jwt(uri):
+    #     private_key_bytes = key_secret.encode('utf-8')
+    #     private_key = serialization.load_pem_private_key(private_key_bytes, password=None)
+    #     jwt_payload = {
+    #         'sub': key_name,
+    #         'iss': "cdp",
+    #         'nbf': int(time.time()),
+    #         'exp': int(time.time()) + 120,
+    #         'uri': uri,
+    #     }
+    #     jwt_token = jwt.encode(
+    #         jwt_payload,
+    #         private_key,
+    #         algorithm='ES256',
+    #         headers={'kid': key_name, 'nonce': secrets.token_hex()},
+    #     )
+    #     return jwt_token
+    #
+    # def main():
+    #     uri = f"{request_method} {request_host}{request_path}"
+    #     jwt_token = build_jwt(uri)
+    #     print(f"export JWT={jwt_token}")
+    #     return jwt_token
+    #
+    # JWT = main()
+
+    conn = http.client.HTTPSConnection("api.coinbase.com")
+    payload = {'Authorization': f'Bearer {JWT}'}
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': f'Bearer {JWT}'
+    }
+    data = {
+        'Authorization': f'Bearer {JWT}'
+    }
+    pathbase = 'https://api.coinbase.com/api/v3/brokerage/products/BTC-USD/ticker?limit=23'
+    # conn.request("GET",
+    #              pathbase,
+    #              headers=headers,
+    #              data=json.dumps(data))
+    # res = conn.getresponse()
+    res = rq.get(pathbase, headers=data)
+    print(res)
+    data = res.read()
+    print(data.decode("utf-8"))
 
 
 
+    # Con request
+    r = rq.get(param['api_url'] + 'products/' + param['crypto'] + '/ticker?limit=23', headers)
+    r = rq.get(param['api_url'] + 'products/' + param['crypto'] + '/trades', auth=auth)
+    hist_df = historic_df(param['crypto'], param['api_url'], auth, param['pag_historic'])
 
-
-
-
-
-
+    # TODO - CONTINUAR VER QUE PASA CON LAS CUENTAS QUE NO SALEN TODAS LAS CRYPTO NI LOS EUR
+    crypto_quantity = math.trunc(disp_ini[crypto_short] * 100) / 100
+    eur = math.trunc(disp_ini['EUR'] * 100) / 100
 
     ####
     if '__file__' in locals():

@@ -18,7 +18,8 @@ inversion_fija_eur: 2000 # cantidad en eur maximo por operación
 #crypto: "DOGE-EUR" # producto
 crypto: "XTZ-EUR" # producto
 
-api_url: 'https://api.pro.coinbase.com/' # url de la api
+#api_url: 'https://api.pro.coinbase.com/' # url de la api
+api_url: 'https://api.coinbase.com/api/v3/brokerage/'
 
 t_limit_percentile: 28800 # tiempo hacia atrás en segundos para calcular los percentiles
 pmax: 50 # percentil superior seguridad - ideal 50

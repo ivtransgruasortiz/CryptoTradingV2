@@ -21,8 +21,8 @@ from string import ascii_lowercase
 import numpy as np
 import random
 
+import utils.constants as cons
 
-# # AUTHENTICATION INTO COINBASE
 
 class CoinbaseExchangeAuth(AuthBase):
 
@@ -63,13 +63,12 @@ def tiempo_pausa_new(exec_time, freq):
     return pausa
 
 
-def disposiciones_iniciales(api_url, auth):
+def disposiciones_iniciales(client):
     disp_ini = {}
     try:
-        account = rq.get(api_url + 'accounts', auth=auth)
-        account = account.json()
-        for item in account:
-            disp_ini.update({item['currency']: float(item['available'])})
+        account = client.get_accounts()
+        for item in account[cons.ACCOUNTS]:
+            disp_ini.update({item['currency']: float(item["available_balance"]["value"])})
     except:
         pass
     return disp_ini

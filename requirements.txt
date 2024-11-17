@@ -15,3 +15,8 @@ scipy
 tqdm==4.67.0
 matplotlib
 tweepy==4.14.0
+coinbase-advanced-py
+
+PyJWT
+cryptography
+
