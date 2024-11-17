@@ -22,7 +22,7 @@ import time
 import secrets
 
 import utils.constants as cons
-from utils.functions import disposiciones_iniciales, historic_df, CoinbaseExchangeAuth
+from utils.functions import disposiciones_iniciales, historic_df, build_jwt
 
 if __name__ == "__main__":
     logging \
@@ -106,80 +106,35 @@ if __name__ == "__main__":
     disp_ini = disposiciones_iniciales(client)
 
     # # FORMA 2 - CON API-REST
-    key_name = api_key
-    key_secret = api_secret \
-        .replace("\\n", "\n")
     request_method = "GET"
-    request_path = "/v2/accounts"
+    request_host = "api.coinbase.com"
+    request_path = "/api/v3/brokerage/accounts"
+    request_path = "/api/v3/brokerage/best_bid_ask"
 
-    # Construir TOKEN JWT
-    # CONS SDK
-    def main():
-        jwt_uri = jwt_generator.format_jwt_uri(request_method, request_path)
-        jwt_token = jwt_generator.build_rest_jwt(jwt_uri, api_key, api_secret)
-        print(f"export JWT={jwt_token}")
-        return jwt_token
+    uri = f"{request_method} {request_host}{request_path}"
+    jwt_token = build_jwt(api_key, api_secret, uri)
 
-
-    JWT = main()
-
-    # # NORMAL
-    # request_host = "api.coinbase.com"
-    #
-    # def build_jwt(uri):
-    #     private_key_bytes = key_secret.encode('utf-8')
-    #     private_key = serialization.load_pem_private_key(private_key_bytes, password=None)
-    #     jwt_payload = {
-    #         'sub': key_name,
-    #         'iss': "cdp",
-    #         'nbf': int(time.time()),
-    #         'exp': int(time.time()) + 120,
-    #         'uri': uri,
-    #     }
-    #     jwt_token = jwt.encode(
-    #         jwt_payload,
-    #         private_key,
-    #         algorithm='ES256',
-    #         headers={'kid': key_name, 'nonce': secrets.token_hex()},
-    #     )
-    #     return jwt_token
-    #
-    # def main():
-    #     uri = f"{request_method} {request_host}{request_path}"
-    #     jwt_token = build_jwt(uri)
-    #     print(f"export JWT={jwt_token}")
-    #     return jwt_token
-    #
-    # JWT = main()
-
-    conn = http.client.HTTPSConnection("api.coinbase.com")
-    payload = {'Authorization': f'Bearer {JWT}'}
+    conn = http.client.HTTPSConnection(request_host)
+    payload = ''
     headers = {
         'Content-Type': 'application/json',
-        'Authorization': f'Bearer {JWT}'
+        "Authorization": f"Bearer {jwt_token}"
     }
-    data = {
-        'Authorization': f'Bearer {JWT}'
-    }
-    pathbase = 'https://api.coinbase.com/api/v3/brokerage/products/BTC-USD/ticker?limit=23'
-    # conn.request("GET",
-    #              pathbase,
-    #              headers=headers,
-    #              data=json.dumps(data))
-    # res = conn.getresponse()
-    res = rq.get(pathbase, headers=data)
-    print(res)
+    # con conn
+    conn.request("GET", request_path, payload, headers)
+    res = conn.getresponse()
     data = res.read()
     print(data.decode("utf-8"))
 
+    # con requests
+    res = rq.get("https://"+request_host+request_path, headers=headers)
+    res.json()
 
+    # TODO - CONTINUAR DESDE AQUI, IMPLEMENTAR UNA FUNCIÓN PARA HACER LAS PETICIONES REST Y POST ADECUADAS
+    # TODO - CONTINUAR VER QUE PASA CON LAS CUENTAS QUE NO SALEN TODAS LAS CRYPTO NI LOS EUR
 
-    # Con request
-    r = rq.get(param['api_url'] + 'products/' + param['crypto'] + '/ticker?limit=23', headers)
-    r = rq.get(param['api_url'] + 'products/' + param['crypto'] + '/trades', auth=auth)
     hist_df = historic_df(param['crypto'], param['api_url'], auth, param['pag_historic'])
 
-    # TODO - CONTINUAR VER QUE PASA CON LAS CUENTAS QUE NO SALEN TODAS LAS CRYPTO NI LOS EUR
     crypto_quantity = math.trunc(disp_ini[crypto_short] * 100) / 100
     eur = math.trunc(disp_ini['EUR'] * 100) / 100
 
