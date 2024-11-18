@@ -47,6 +47,20 @@ def build_jwt(key_name, key_secret, uri):
     return jwt_token
 
 
+class Rest_Api():
+    def __init__(self, api_key, api_secret, request_method, request_path):
+        self.api_key = api_key
+        self.api_secret = api_secret
+        self.request_method = request_method
+        self.request_path = request_path
+        self.uri = f"{self.request_method} {cons.REQUEST_HOST}{self.request_path}"
+        self.jwt_token = build_jwt(self.api_key, self.api_secret, self.uri)
+
+    def call(self):
+        res = rq.get(os.path.join(cons.HTTPS, cons.REQUEST_HOST, self.request_path).replace("\\", "/"),
+                     headers=headers)
+        return res.json()
+
 def tiempo_pausa_new(exec_time, freq):
     """
     FUNCION de usuario que nos da la pausa que debe

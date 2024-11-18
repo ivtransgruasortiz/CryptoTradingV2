@@ -105,7 +105,24 @@ if __name__ == "__main__":
     # Disp_iniciales - OPCIONAL SOLO POR INFORMACION
     disp_ini = disposiciones_iniciales(client)
 
+
     # # FORMA 2 - CON API-REST
+
+    class rest_api():
+        def __init__(self, api_key, api_secret, request_method, request_path):
+            self.api_key = api_key
+            self.api_secret = api_secret
+            self.request_method = request_method
+            self.request_path = request_path
+            self.uri = f"{self.request_method} {cons.REQUEST_HOST}{self.request_path}"
+            self.jwt_token = build_jwt(self.api_key, self.api_secret, self.uri)
+
+        def call(self):
+            res = rq.get(os.path.join(cons.HTTPS, cons.REQUEST_HOST, self.request_path).replace("\\", "/"),
+                         headers=headers)
+            return res.json()
+
+
     request_method = "GET"
     request_host = "api.coinbase.com"
     request_path = "/api/v3/brokerage/accounts"
@@ -129,7 +146,7 @@ if __name__ == "__main__":
     print(data.decode("utf-8"))
 
     # con requests
-    res = rq.get("https://"+request_host+request_path, headers=headers)
+    res = rq.get("https://" + request_host + request_path, headers=headers)
     res.json()
 
     # TODO - CONTINUAR DESDE AQUI, IMPLEMENTAR UNA FUNCIÓN PARA HACER LAS PETICIONES REST Y POST ADECUADAS
