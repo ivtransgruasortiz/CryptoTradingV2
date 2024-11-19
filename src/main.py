@@ -22,7 +22,7 @@ import time
 import secrets
 
 import utils.constants as cons
-from utils.functions import disposiciones_iniciales, historic_df, build_jwt
+from utils.functions import disposiciones_iniciales, historic_df, build_jwt, RestApi
 
 if __name__ == "__main__":
     logging \
@@ -97,57 +97,9 @@ if __name__ == "__main__":
     #########################
     # #### CONSULTAS #######
     #########################
-
-    # # FORMA 1 - CON SDK (Software Development Kit)
-    client = RESTClient(api_key=api_key, api_secret=api_secret)
-    accounts = client.get_accounts()[cons.ACCOUNTS]
-    accounts_crypto = [x["available_balance"] for x in accounts if x["available_balance"]["value"] != "0"]
-    # Disp_iniciales - OPCIONAL SOLO POR INFORMACION
-    disp_ini = disposiciones_iniciales(client)
-
-
-    # # FORMA 2 - CON API-REST
-
-    class rest_api():
-        def __init__(self, api_key, api_secret, request_method, request_path):
-            self.api_key = api_key
-            self.api_secret = api_secret
-            self.request_method = request_method
-            self.request_path = request_path
-            self.uri = f"{self.request_method} {cons.REQUEST_HOST}{self.request_path}"
-            self.jwt_token = build_jwt(self.api_key, self.api_secret, self.uri)
-
-        def call(self):
-            res = rq.get(os.path.join(cons.HTTPS, cons.REQUEST_HOST, self.request_path).replace("\\", "/"),
-                         headers=headers)
-            return res.json()
-
-
-    request_method = "GET"
-    request_host = "api.coinbase.com"
-    request_path = "/api/v3/brokerage/accounts"
-    request_path = "/api/v3/brokerage/best_bid_ask"
-
-    uri = f"{request_method} {request_host}{request_path}"
-    jwt_token = build_jwt(api_key, api_secret, uri)
-    # CON SDK (no funciona bien)
-    jwt_token = jwt_generator.build_ws_jwt(api_key, api_secret)
-
-    conn = http.client.HTTPSConnection(request_host)
-    payload = ''
-    headers = {
-        'Content-Type': 'application/json',
-        "Authorization": f"Bearer {jwt_token}"
-    }
-    # con conn
-    conn.request("GET", request_path, payload, headers)
-    res = conn.getresponse()
-    data = res.read()
-    print(data.decode("utf-8"))
-
-    # con requests
-    res = rq.get("https://" + request_host + request_path, headers=headers)
-    res.json()
+    endpoint = "/api/v3/brokerage/best_bid_ask"
+    restapi = RestApi(api_key, api_secret, cons.GET, endpoint)
+    jsonresp = restapi.rest()
 
     # TODO - CONTINUAR DESDE AQUI, IMPLEMENTAR UNA FUNCIÓN PARA HACER LAS PETICIONES REST Y POST ADECUADAS
     # TODO - CONTINUAR VER QUE PASA CON LAS CUENTAS QUE NO SALEN TODAS LAS CRYPTO NI LOS EUR

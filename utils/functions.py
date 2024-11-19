@@ -1,3 +1,6 @@
+import logging
+import os
+
 import pandas as pd
 import time
 import datetime
@@ -47,19 +50,42 @@ def build_jwt(key_name, key_secret, uri):
     return jwt_token
 
 
-class Rest_Api():
-    def __init__(self, api_key, api_secret, request_method, request_path):
+class RestApi:
+    def __init__(self, api_key, api_secret, request_method, endpoint, **kwargs):
         self.api_key = api_key
         self.api_secret = api_secret
         self.request_method = request_method
-        self.request_path = request_path
-        self.uri = f"{self.request_method} {cons.REQUEST_HOST}{self.request_path}"
+        self.endpoint = endpoint
+        self.https = cons.HTTPS
+        self.host = cons.REQUEST_HOST
+        self.uri = f"{self.request_method} {self.host}{self.endpoint}"
         self.jwt_token = build_jwt(self.api_key, self.api_secret, self.uri)
+        self.headers = {
+            'Content-Type': 'application/json',
+            "Authorization": f"Bearer {self.jwt_token}"
+        }
+        self.params = kwargs
+        # self.path = self.https + self.host + self.request_path
+        self.enpoint_path = self.https + self.host + self.endpoint
+        print(self.jwt_token)
+        print(self.enpoint_path)
 
-    def call(self):
-        res = rq.get(os.path.join(cons.HTTPS, cons.REQUEST_HOST, self.request_path).replace("\\", "/"),
-                     headers=headers)
-        return res.json()
+    def rest(self):
+        if self.request_method.upper() == cons.GET:
+            res = rq.get(self.enpoint_path, params=self.params, headers=self.headers)
+        elif self.request_method.upper() == cons.POST:
+            res = rq.post(self.enpoint_path, params=self.params, headers=self.headers)
+        if res.status_code == 200:
+            # Procesamos los datos en formato JSON (si la API devuelve JSON)
+            data = res.json()
+            logging.info("all ok")
+        else:
+            # En caso de error, mostramos el código de estado
+            data = None
+            print(f"Error: {res.status_code}, {res.text}")
+            logging.info(f"Error: {res.status_code}, {res.text}")
+        return data
+
 
 def tiempo_pausa_new(exec_time, freq):
     """
