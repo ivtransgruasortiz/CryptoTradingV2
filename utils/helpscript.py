@@ -30,3 +30,8 @@
 # endpoint_path = os.path.join(cons.HTTPS, cons.REQUEST_HOST, endpoint).replace("\\", "/")
 # res = rq.get(endpoint_path, headers=headers)
 # res.json()
+
+# # Forma 3 - Con clase propia
+# endpoint = f"/api/v3/brokerage/products/{crypto}/ticker"
+# restapi = RestApi(api_key, api_secret, cons.GET, endpoint, cursor=1)
+# jsonresp = restapi.rest()

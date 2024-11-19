@@ -86,6 +86,32 @@ class RestApi:
         return data
 
 
+class Headers:
+    # def __init__(self, api_key, api_secret, request_method, endpoint):
+    #     self.api_key = api_key
+    #     self.api_secret = api_secret
+    #     self.request_method = request_method
+    #     self.endpoint = endpoint
+    #     self.https = cons.HTTPS
+    #     self.host = cons.REQUEST_HOST
+    #     self.uri = f"{self.request_method} {self.host}{self.endpoint}"
+    #     self.jwt_token = build_jwt(self.api_key, self.api_secret, self.uri)
+    #     self.headers = {
+    #         'Content-Type': 'application/json',
+    #         "Authorization": f"Bearer {self.jwt_token}"
+    #     }
+
+    @staticmethod
+    def headers(api_key, api_secret, request_method, endpoint):
+        uri = f"{request_method} {cons.REQUEST_HOST}{endpoint}"
+        jwt_token = build_jwt(api_key, api_secret, uri)
+        headers = {
+            'Content-Type': 'application/json',
+            "Authorization": f"Bearer {jwt_token}"
+        }
+        return headers
+
+
 def tiempo_pausa_new(exec_time, freq):
     """
     FUNCION de usuario que nos da la pausa que debe

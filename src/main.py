@@ -22,7 +22,7 @@ import time
 import secrets
 
 import utils.constants as cons
-from utils.functions import disposiciones_iniciales, historic_df, build_jwt, RestApi
+from utils.functions import disposiciones_iniciales, historic_df, build_jwt, RestApi, Headers
 
 if __name__ == "__main__":
     logging \
@@ -66,7 +66,13 @@ if __name__ == "__main__":
     api_secret = str(os.environ.get('API_SECRET')) \
         .replace("\\n", "\n")
 
-    # # Parametros iniciales
+    ###########################
+    # START REAL-TIME TRADING #
+    ###########################
+    crypto_log.info('### Data OK! ###')
+    print('\n### Real-Time Processing... ### - \nPress CTRL+C (QUICKLY 2-TIMES!!) to cancel and view results')
+
+    # PARAMETROS INICIALES
     crypto = param['crypto']
     crypto_short = crypto.split('-')[0]
     trigger_tramos = param['trigger_tramos']
@@ -94,16 +100,26 @@ if __name__ == "__main__":
     nummax = param['nummax']
     redefinicion_max = param['redefinicion_max']
 
-    #########################
-    # #### CONSULTAS #######
-    #########################
-    endpoint = "/api/v3/brokerage/best_bid_ask"
-    restapi = RestApi(api_key, api_secret, cons.GET, endpoint)
-    jsonresp = restapi.rest()
+    # #########################
+    # # #### CONSULTAS #######
+    # #########################
+    # endpoint = "/api/v3/brokerage/best_bid_ask"
+    # restapi = RestApi(api_key, api_secret, cons.GET, endpoint)
+    # jsonresp = restapi.rest()
 
     # TODO - CONTINUAR DESDE AQUI, IMPLEMENTAR UNA FUNCIÓN PARA HACER LAS PETICIONES REST Y POST ADECUADAS
     # TODO - CONTINUAR VER QUE PASA CON LAS CUENTAS QUE NO SALEN TODAS LAS CRYPTO NI LOS EUR
 
+    endpoint = f"/api/v3/brokerage/products/{crypto}/ticker"
+    endpoint = f"/api/v3/brokerage/accounts"
+    cursor = 'fffa35ae-1f06-5e94-90f0-538dcb18b84d'
+    extras = f"?limit=1&cursor={cursor}"
+    endpoint_path = cons.HTTPS + cons.REQUEST_HOST + endpoint + extras
+    res = rq.get(endpoint_path, headers=Headers.headers(api_key, api_secret, cons.GET, endpoint))
+    res.json()
+
+
+    # todo be continue...
     hist_df = historic_df(param['crypto'], param['api_url'], auth, param['pag_historic'])
 
     crypto_quantity = math.trunc(disp_ini[crypto_short] * 100) / 100
