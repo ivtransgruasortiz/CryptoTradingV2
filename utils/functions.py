@@ -65,16 +65,15 @@ class RestApi:
             "Authorization": f"Bearer {self.jwt_token}"
         }
         self.params = kwargs
-        # self.path = self.https + self.host + self.request_path
-        self.enpoint_path = self.https + self.host + self.endpoint
+        self.endpoint_path = self.https + self.host + self.endpoint
         print(self.jwt_token)
-        print(self.enpoint_path)
+        print(self.endpoint_path)
 
     def rest(self):
         if self.request_method.upper() == cons.GET:
-            res = rq.get(self.enpoint_path, params=self.params, headers=self.headers)
+            res = rq.get(self.endpoint_path, params=self.params, headers=self.headers)
         elif self.request_method.upper() == cons.POST:
-            res = rq.post(self.enpoint_path, params=self.params, headers=self.headers)
+            res = rq.post(self.endpoint_path, params=self.params, headers=self.headers)
         if res.status_code == 200:
             # Procesamos los datos en formato JSON (si la API devuelve JSON)
             data = res.json()
