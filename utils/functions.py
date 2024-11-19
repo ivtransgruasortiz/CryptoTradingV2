@@ -87,29 +87,131 @@ class RestApi:
 
 
 class Headers:
-    # def __init__(self, api_key, api_secret, request_method, endpoint):
-    #     self.api_key = api_key
-    #     self.api_secret = api_secret
-    #     self.request_method = request_method
-    #     self.endpoint = endpoint
-    #     self.https = cons.HTTPS
-    #     self.host = cons.REQUEST_HOST
-    #     self.uri = f"{self.request_method} {self.host}{self.endpoint}"
-    #     self.jwt_token = build_jwt(self.api_key, self.api_secret, self.uri)
-    #     self.headers = {
-    #         'Content-Type': 'application/json',
-    #         "Authorization": f"Bearer {self.jwt_token}"
-    #     }
+    def __init__(self, api_key, api_secret):
+        self.api_key = api_key
+        self.api_secret = api_secret
 
-    @staticmethod
-    def headers(api_key, api_secret, request_method, endpoint):
+    def headers(self, request_method, endpoint):
         uri = f"{request_method} {cons.REQUEST_HOST}{endpoint}"
-        jwt_token = build_jwt(api_key, api_secret, uri)
+        jwt_token = build_jwt(self.api_key, self.api_secret, uri)
         headers = {
             'Content-Type': 'application/json',
             "Authorization": f"Bearer {jwt_token}"
         }
         return headers
+
+
+def historic_df(crypto, api_url, header_ks, pag_historic):
+    endpoint = f"/api/v3/brokerage/products/{crypto}/ticker"
+    endpoint_path = cons.HTTPS + cons.REQUEST_HOST + endpoint
+    vect_hist = {}
+    df_new = pd.DataFrame()
+    print('### Gathering Data... ')
+    r = rq.get(endpoint_path, headers=header_ks.headers(cons.GET, endpoint))
+    enlace = r.headers['cursor']
+    trades = [{'bids': [[float(x['price']), float(x['size']), 1]],
+               'asks': [[float(x['price']), float(x['size']), 1]],
+               'sequence': x['trade_id'],
+               'time': x['time']} for x in r.json()]
+    for i in tqdm.trange(pag_historic):
+        r = rq.get(api_url + 'products/' + crypto + '/trades?after=%s' % enlace, auth=auth)
+        time.sleep(0.3)
+        enlace = r.headers['Cb-After']
+        valores = r.json()
+        # trades = trades + [float(x['price']) for x in r.json()]
+        trades += [{'bids': [[float(x['price']), float(x['size']), 1]],
+                    'asks': [[float(x['price']), float(x['size']), 1]],
+                    'sequence': x['trade_id'],
+                    'time': x['time'],
+                    'side': x['side']} for x in r.json()]
+    df_new = pd.DataFrame.from_dict(trades)
+    hist_df = df_new.sort_values('time')
+    return hist_df
+
+
+# def historic_df(crypto, api_url, auth, pag_historic):
+#     vect_hist = {}
+#     df_new = pd.DataFrame()
+#     print('### Gathering Data... ')
+#     r = rq.get(api_url + 'products/' + crypto + '/trades', auth=auth)
+#     enlace = r.headers['Cb-After']
+#     trades = [{'bids': [[float(x['price']), float(x['size']), 1]],
+#                'asks': [[float(x['price']), float(x['size']), 1]],
+#                'sequence': x['trade_id'],
+#                'time': x['time']} for x in r.json()]
+#     for i in tqdm.trange(pag_historic):
+#         r = rq.get(api_url + 'products/' + crypto + '/trades?after=%s' % enlace, auth=auth)
+#         time.sleep(0.3)
+#         enlace = r.headers['Cb-After']
+#         valores = r.json()
+#         # trades = trades + [float(x['price']) for x in r.json()]
+#         trades += [{'bids': [[float(x['price']), float(x['size']), 1]],
+#                     'asks': [[float(x['price']), float(x['size']), 1]],
+#                     'sequence': x['trade_id'],
+#                     'time': x['time'],
+#                     'side': x['side']} for x in r.json()]
+#     df_new = pd.DataFrame.from_dict(trades)
+#     hist_df = df_new.sort_values('time')
+#     return hist_df
+
+
+def sma(n, datos):
+    if len(datos) > n:
+        media = sum(datos[-n:]) / n
+        return round(media, 5)
+    else:
+        return round(datos[0], 5)
+
+
+def ema(n, datos, alpha, media_ant):
+    if len(datos) > n:
+        expmedia = datos[-1] * alpha + (1 - alpha) * media_ant[-1]
+        return round(expmedia, 5)
+    else:
+        return round(datos[0], 5)
+
+
+def medias_exp(bids_asks, n_rapida=60, n_lenta=360):
+    """
+    :param bids_asks: lista de valores sobre los que calcular las medias exponenciales
+    :param n_rapida: periodo de calculo media rapida-nerviosa
+    :param n_lenta: periodo de calculo media lenta-tendencia
+    :return: lista de listas de valores correspondientes a las medias rapida y lenta
+    """
+    mediavar_rapida = []
+    mediavar_lenta = []
+    expmediavar_rapida = []
+    expmediavar_lenta = []
+    for i in range(len(bids_asks)):
+        mediavar_rapida.append(sma(n_rapida, bids_asks[:i + 1]))
+        mediavar_lenta.append(sma(n_lenta, bids_asks[:i + 1]))
+        if len(expmediavar_rapida) <= n_rapida + 1:
+            expmediavar_rapida.append(mediavar_rapida[-1])
+        else:
+            expmediavar_rapida.append(ema(n_rapida, bids_asks[:i + 1], 2.0 / (n_rapida + 1), expmediavar_rapida))
+
+        if len(expmediavar_lenta) <= n_lenta + 1:
+            expmediavar_lenta.append(mediavar_lenta[-1])
+        else:
+            expmediavar_lenta.append(ema(n_lenta, bids_asks[:i + 1], 2.0 / (n_lenta + 1), expmediavar_lenta))
+    return [expmediavar_rapida, expmediavar_lenta]
+
+
+def df_medias_bids_asks(bids_asks, crypto, fechas, n_rapida=60, n_lenta=360):
+    """
+    :param bids_asks: lista para formar el dataframe
+    :param crypto: moneda
+    :param fechas: lista fechas
+    :param n_rapida: parametros medias para calculos medias exponenciales
+    :param n_lenta: parametros medias para calculos medias exponenciales
+    :return:
+    """
+    df_bids_asks = pd.DataFrame(fechas)
+    df_bids_asks['expmedia_rapida'] = medias_exp(bids_asks, n_rapida, n_lenta)[0]
+    df_bids_asks['expmedia_lenta'] = medias_exp(bids_asks, n_rapida, n_lenta)[1]
+    df_bids_asks[crypto] = bids_asks
+    df_bids_asks['time'] = fechas
+    return df_bids_asks
 
 
 def tiempo_pausa_new(exec_time, freq):
@@ -259,91 +361,6 @@ def buy_sell(compra_venta, crypto, tipo, api_url, auth, sizefunds=None, precio=N
         print('error')
         pass
     return ordenes
-
-
-def historic_df(crypto, api_url, auth, pag_historic):
-    vect_hist = {}
-    df_new = pd.DataFrame()
-    print('### Gathering Data... ')
-    r = rq.get(api_url + 'products/' + crypto + '/trades', auth=auth)
-    enlace = r.headers['Cb-After']
-    trades = [{'bids': [[float(x['price']), float(x['size']), 1]],
-               'asks': [[float(x['price']), float(x['size']), 1]],
-               'sequence': x['trade_id'],
-               'time': x['time']} for x in r.json()]
-    for i in tqdm.trange(pag_historic):
-        r = rq.get(api_url + 'products/' + crypto + '/trades?after=%s' % enlace, auth=auth)
-        time.sleep(0.3)
-        enlace = r.headers['Cb-After']
-        valores = r.json()
-        # trades = trades + [float(x['price']) for x in r.json()]
-        trades += [{'bids': [[float(x['price']), float(x['size']), 1]],
-                    'asks': [[float(x['price']), float(x['size']), 1]],
-                    'sequence': x['trade_id'],
-                    'time': x['time'],
-                    'side': x['side']} for x in r.json()]
-    df_new = pd.DataFrame.from_dict(trades)
-    hist_df = df_new.sort_values('time')
-    return hist_df
-
-
-def sma(n, datos):
-    if (len(datos) > n):
-        media = sum(datos[-n:]) / n
-        return round(media, 5)
-    else:
-        return round(datos[0], 5)
-
-
-def ema(n, datos, alpha, media_ant):
-    if len(datos) > n:
-        expmedia = datos[-1] * alpha + (1 - alpha) * media_ant[-1]
-        return round(expmedia, 5)
-    else:
-        return round(datos[0], 5)
-
-
-def medias_exp(bids_asks, n_rapida=60, n_lenta=360):
-    '''
-    :param bids_asks: lista de valores sobre los que calcular las medias exponenciales
-    :param n_rapida: periodo de calculo media rapida-nerviosa
-    :param n_lenta: periodo de calculo media lenta-tendencia
-    :return: lista de listas de valores correspondientes a las medias rapida y lenta
-    '''
-    mediavar_rapida = []
-    mediavar_lenta = []
-    expmediavar_rapida = []
-    expmediavar_lenta = []
-    for i in range(len(bids_asks)):
-        mediavar_rapida.append(sma(n_rapida, bids_asks[:i + 1]))
-        mediavar_lenta.append(sma(n_lenta, bids_asks[:i + 1]))
-        if len(expmediavar_rapida) <= n_rapida + 1:
-            expmediavar_rapida.append(mediavar_rapida[-1])
-        else:
-            expmediavar_rapida.append(ema(n_rapida, bids_asks[:i + 1], 2.0 / (n_rapida + 1), expmediavar_rapida))
-
-        if len(expmediavar_lenta) <= n_lenta + 1:
-            expmediavar_lenta.append(mediavar_lenta[-1])
-        else:
-            expmediavar_lenta.append(ema(n_lenta, bids_asks[:i + 1], 2.0 / (n_lenta + 1), expmediavar_lenta))
-    return [expmediavar_rapida, expmediavar_lenta]
-
-
-def df_medias_bids_asks(bids_asks, crypto, fechas, n_rapida=60, n_lenta=360):
-    '''
-    :param bids_asks: lista para formar el dataframe
-    :param crypto: moneda
-    :param fechas: lista fechas
-    :param n_rapida: parametros medias para calculos medias exponenciales
-    :param n_lenta: parametros medias para calculos medias exponenciales
-    :return:
-    '''
-    df_bids_asks = pd.DataFrame(fechas)
-    df_bids_asks['expmedia_rapida'] = medias_exp(bids_asks, n_rapida, n_lenta)[0]
-    df_bids_asks['expmedia_lenta'] = medias_exp(bids_asks, n_rapida, n_lenta)[1]
-    df_bids_asks[crypto] = bids_asks
-    df_bids_asks['time'] = fechas
-    return df_bids_asks
 
 
 def limite_tamanio(tamanio_listas_min, factor_tamanio, lista_a_limitar):

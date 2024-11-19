@@ -111,13 +111,15 @@ if __name__ == "__main__":
     # TODO - CONTINUAR VER QUE PASA CON LAS CUENTAS QUE NO SALEN TODAS LAS CRYPTO NI LOS EUR
 
     endpoint = f"/api/v3/brokerage/products/{crypto}/ticker"
-    endpoint = f"/api/v3/brokerage/accounts"
-    cursor = 'fffa35ae-1f06-5e94-90f0-538dcb18b84d'
-    extras = f"?limit=1&cursor={cursor}"
-    endpoint_path = cons.HTTPS + cons.REQUEST_HOST + endpoint + extras
-    res = rq.get(endpoint_path, headers=Headers.headers(api_key, api_secret, cons.GET, endpoint))
+    extras = "limit=500"
+    endpoint_path = cons.HTTPS + cons.REQUEST_HOST + "?".join([endpoint, extras])
+    # endpoint = f"/api/v3/brokerage/accounts"
+    # cursor = 'fffa35ae-1f06-5e94-90f0-538dcb18b84d'
+    # extras = f"?limit=1&cursor={cursor}"
+    # endpoint_path = cons.HTTPS + cons.REQUEST_HOST + endpoint + extras
+    header_ks = Headers(api_key, api_secret)
+    res = rq.get(endpoint_path, headers=header_ks.headers(cons.GET, endpoint))
     res.json()
-
 
     # todo be continue...
     hist_df = historic_df(param['crypto'], param['api_url'], auth, param['pag_historic'])
