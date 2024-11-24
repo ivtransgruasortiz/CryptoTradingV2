@@ -5,24 +5,15 @@ import os
 import ssl
 import sys
 import time
+import datetime
 
-import yaml
-
-from coinbase.rest import RESTClient
-import hmac, hashlib, base64
+import math
 import requests as rq
-from requests.auth import AuthBase
-import http.client
-import json
-
-import jwt
-from coinbase import jwt_generator
-from cryptography.hazmat.primitives import serialization
-import time
-import secrets
+import yaml
+import pandas as pd
 
 import utils.constants as cons
-from utils.functions import disposiciones_iniciales, historic_df, build_jwt, RestApi, Headers
+from utils.functions import historic_df, Headers, get_accounts
 
 if __name__ == "__main__":
     logging \
@@ -103,46 +94,29 @@ if __name__ == "__main__":
     # #########################
     # # #### CONSULTAS #######
     # #########################
+    # # FORMA 1 - CON CLASS ResApi
     # endpoint = "/api/v3/brokerage/best_bid_ask"
     # restapi = RestApi(api_key, api_secret, cons.GET, endpoint)
     # jsonresp = restapi.rest()
-
-    # TODO - CONTINUAR DESDE AQUI, IMPLEMENTAR UNA FUNCIÓN PARA HACER LAS PETICIONES REST Y POST ADECUADAS
-    # TODO - CONTINUAR VER QUE PASA CON LAS CUENTAS QUE NO SALEN TODAS LAS CRYPTO NI LOS EUR
-
-    endpoint = f"/api/v3/brokerage/products/{crypto}/ticker"
-    extras = "limit=500"
-    endpoint_path = cons.HTTPS + cons.REQUEST_HOST + "?".join([endpoint, extras])
-    # endpoint = f"/api/v3/brokerage/accounts"
-    # cursor = 'fffa35ae-1f06-5e94-90f0-538dcb18b84d'
-    # extras = f"?limit=1&cursor={cursor}"
+    # # FORMA 2 - CON REQUESTS
+    # endpoint = f"/api/v3/brokerage/products/{crypto}/ticker"
+    # extras = "limit=500"
     # endpoint_path = cons.HTTPS + cons.REQUEST_HOST + endpoint + extras
-    header_ks = Headers(api_key, api_secret)
-    res = rq.get(endpoint_path, headers=header_ks.headers(cons.GET, endpoint))
-    res.json()
+    # header_ks = Headers(api_key, api_secret)
+    # endpoint_path = cons.HTTPS + cons.REQUEST_HOST + "?".join([endpoint, header_ks.extras()])
+    # res = rq.get(endpoint_path, headers=header_ks.headers(cons.GET, endpoint))
+    # res.json()
+
+    # OBTENEMOS LAS DISPOSICIONES INICIALES DE LA CUENTA
+    disp_ini = get_accounts(api_key, api_secret)
 
     # todo be continue...
+    # OBTENEMOS EL HISTORICO
+
+
+
     hist_df = historic_df(param['crypto'], param['api_url'], auth, param['pag_historic'])
 
     crypto_quantity = math.trunc(disp_ini[crypto_short] * 100) / 100
     eur = math.trunc(disp_ini['EUR'] * 100) / 100
 
-    ####
-    if '__file__' in locals():
-        auth = CoinbaseExchangeAuth(sys.argv[1], sys.argv[2], sys.argv[3])
-        client_r = pymongo.MongoClient(
-            "mongodb+srv://%s:%s@cluster0.vsp3s.mongodb.net/" % (sys.argv[4], sys.argv[5]), ssl_cert_reqs=ssl.CERT_NONE)
-        db_twilio = client_r.get_database(whatsapp_twilio_db)
-        db_mail = client_r.get_database(mail_db)
-        db_twitter = client_r.get_database(twitter_db)
-        client = pymongo.MongoClient(
-            "mongodb+srv://%s:%s@cluster0.vsp3s.mongodb.net/%s?retryWrites=true&w=majority" % (sys.argv[4],
-                                                                                               sys.argv[5],
-                                                                                               crypto_trading_db),
-            ssl_cert_reqs=ssl.CERT_NONE)
-        db = client.get_database(crypto_trading_db)
-    else:
-        with open('config.yaml', 'r') as config_file:
-            cred = yaml.safe_load(config_file)
-            config_file.close()
-        auth = CoinbaseExchangeAuth(cred['Credentials'][0], cred['Credentials'][1], cred['Credentials'][2])

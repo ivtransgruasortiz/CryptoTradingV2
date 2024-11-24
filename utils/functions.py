@@ -100,14 +100,70 @@ class Headers:
         }
         return headers
 
+    @staticmethod
+    def query_params(**kwargs):
+        queryparams = "&".join([f"{x}={y}" for x, y in zip(kwargs.keys(), kwargs.values())])
+        return queryparams
 
-def historic_df(crypto, api_url, header_ks, pag_historic):
+
+def get_accounts(api_key, api_secret):
+    is_continue = True
+    account = []
+    header_ks = Headers(api_key, api_secret)
+    endpoint = "/api/v3/brokerage/accounts"
+    cursor = ""
+    while is_continue:
+        try:
+            endpoint_path = cons.HTTPS + \
+                            cons.REQUEST_HOST + \
+                            "?".join([endpoint, header_ks.query_params(limit=250, cursor=cursor)])
+            res = rq.get(endpoint_path, headers=header_ks.headers(cons.GET, endpoint))
+            account += res.json()["accounts"]
+            is_continue = res.json()["has_next"]
+            cursor = res.json()["cursor"]
+        except Exception as e:
+            logging.info(f"Error getting account details: {e}")
+            break
+    myaccounts = [x["available_balance"] for x in account if x["available_balance"]["value"] != "0"]
+    return myaccounts
+
+
+def historic_df(api_key, api_secret, crypto, t_hours_back):
+    is_continue = True
+    trades = []
+    header_ks = Headers(api_key, api_secret)
     endpoint = f"/api/v3/brokerage/products/{crypto}/ticker"
-    endpoint_path = cons.HTTPS + cons.REQUEST_HOST + endpoint
+    limit = 1000
+    date_ini = datetime.datetime.now() - datetime.timedelta(hours=t_hours_back)
+    start = ""
+    start_timestamp = ""
+    end = ""
     vect_hist = {}
     df_new = pd.DataFrame()
     print('### Gathering Data... ')
-    r = rq.get(endpoint_path, headers=header_ks.headers(cons.GET, endpoint))
+    while is_continue:
+        endpoint_path = cons.HTTPS + \
+                        cons.REQUEST_HOST + \
+                        "?".join([endpoint, header_ks.query_params(limit=limit, start=start_timestamp, end=end)])
+        r = rq.get(endpoint_path, headers=header_ks.headers(cons.GET, endpoint))
+        trades += [{'bids': [[float(x['price']), float(x['size']), 1]],
+                    'asks': [[float(x['price']), float(x['size']), 1]],
+                    'sequence': x['trade_id'],
+                    'time': x['time']} for x in r.json()['trades']]
+        start = trades[-1]['time']
+        start_datetime = datetime.datetime.strptime(start, "%Y-%m-%dT%H:%M:%S.%fZ")
+        start_timestamp = int(start_datetime.timestamp())
+        # start_unix = time.mktime(start_datetime.timetuple())*1e3 + start_datetime.microsecond/1e3
+        if date_ini > start_datetime:
+            is_continue = False
+            trades = [x for x in trades if x['time'].strptime("%Y-%m-%dT%H:%M:%S.%fZ") >
+                      date_ini]
+        print(f"date_ini: {date_ini} --- date_start: {start_datetime}")
+    return trades
+
+    # t_hours_back = 1
+    # a = historic_df(api_key, api_secret, crypto, t_hours_back)
+
     enlace = r.headers['cursor']
     trades = [{'bids': [[float(x['price']), float(x['size']), 1]],
                'asks': [[float(x['price']), float(x['size']), 1]],
