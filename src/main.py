@@ -11,6 +11,8 @@ import math
 import requests as rq
 import yaml
 import pandas as pd
+from coinbase import jwt_generator
+from coinbase.rest import RESTClient
 
 import utils.constants as cons
 from utils.functions import historic_df, Headers, get_accounts
@@ -94,6 +96,12 @@ if __name__ == "__main__":
     # #########################
     # # #### CONSULTAS #######
     # #########################
+    # # FORMA 0 - CON SDK (Software Development Kit)
+    # client = RESTClient(api_key=api_key, api_secret=api_secret)
+    # jwt_token = jwt_generator.build_ws_jwt(api_key, api_secret) # no hace falta pero como lo pongo como info
+    # accounts = client.get_accounts()[cons.ACCOUNTS]
+    # accounts_crypto = [x["available_balance"] for x in accounts if x["available_balance"]["value"] != "0"]
+    # disp_ini = disposiciones_iniciales(client)
     # # FORMA 1 - CON CLASS ResApi
     # endpoint = "/api/v3/brokerage/best_bid_ask"
     # restapi = RestApi(api_key, api_secret, cons.GET, endpoint)
@@ -112,6 +120,14 @@ if __name__ == "__main__":
 
     # todo be continue...
     # OBTENEMOS EL HISTORICO
+    client = RESTClient(api_key=api_key, api_secret=api_secret)
+    # jwt_token = jwt_generator.build_ws_jwt(api_key, api_secret)
+    # accounts = client.get_accounts()[cons.ACCOUNTS]
+    hist = client.get_market_trades("BTC-EUR", limit=3)
+    time = '2024-11-25T08:06:29.964206Z'
+    start_datetime = datetime.datetime.strptime(time, "%Y-%m-%dT%H:%M:%S.%fZ")
+    start_timestamp = int(start_datetime.timestamp())
+    hist = client.get_market_trades("BTC-EUR", limit=3, end=start_timestamp)
 
 
 
