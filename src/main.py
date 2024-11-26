@@ -15,7 +15,7 @@ from coinbase import jwt_generator
 from coinbase.rest import RESTClient
 
 import utils.constants as cons
-from utils.functions import historic_df, Headers, get_accounts
+from utils.functions import historic_df, Headers, get_accounts, get_accounts_sdk
 
 if __name__ == "__main__":
     logging \
@@ -117,6 +117,7 @@ if __name__ == "__main__":
 
     # OBTENEMOS LAS DISPOSICIONES INICIALES DE LA CUENTA
     disp_ini = get_accounts(api_key, api_secret)
+    disp_ini_sdk = get_accounts_sdk(api_key, api_secret)
 
     # todo be continue...
     # OBTENEMOS EL HISTORICO
