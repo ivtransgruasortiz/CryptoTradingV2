@@ -11,11 +11,15 @@ import math
 import requests as rq
 import yaml
 import pandas as pd
+import tqdm
+import numpy as np
+
 from coinbase import jwt_generator
 from coinbase.rest import RESTClient
 
 import utils.constants as cons
-from utils.functions import historic_df, Headers, get_accounts, get_accounts_sdk
+from utils.functions import Headers, get_accounts, get_accounts_sdk, disposiciones_iniciales, \
+    historic_df_sdk, toma_1, fechas_time, df_medias_bids_asks, pintar_grafica
 
 if __name__ == "__main__":
     logging \
@@ -25,6 +29,9 @@ if __name__ == "__main__":
     logging.getLogger("requests").setLevel(logging.WARNING)
     logging.getLogger("urllib3").setLevel(logging.WARNING)
     crypto_log = logging.getLogger("Crypto_Logging")
+
+    pd.set_option('display.max_columns', None)
+    pd.set_option('display.max_rows', 20)
 
     # Importar Parametros
     with open('utils/parameters.yaml', 'r') as parameters_file:
@@ -118,22 +125,37 @@ if __name__ == "__main__":
     # OBTENEMOS LAS DISPOSICIONES INICIALES DE LA CUENTA
     disp_ini = get_accounts(api_key, api_secret)
     disp_ini_sdk = get_accounts_sdk(api_key, api_secret)
+    eur = math.trunc(disp_ini_sdk[cons.EUR] * 100) / 100
+    crypto_quantity = math.trunc(disp_ini_sdk[crypto_short] * 100) / 100
 
-    # todo be continue...
-    # OBTENEMOS EL HISTORICO
-    client = RESTClient(api_key=api_key, api_secret=api_secret)
-    # jwt_token = jwt_generator.build_ws_jwt(api_key, api_secret)
-    # accounts = client.get_accounts()[cons.ACCOUNTS]
-    hist = client.get_market_trades("BTC-EUR", limit=3)
-    time = '2024-11-25T08:06:29.964206Z'
-    start_datetime = datetime.datetime.strptime(time, "%Y-%m-%dT%H:%M:%S.%fZ")
-    start_timestamp = int(start_datetime.timestamp())
-    hist = client.get_market_trades("BTC-EUR", limit=3, end=start_timestamp)
+    # Historico mejorado para el script
+    hist_df = historic_df_sdk(api_key, api_secret, crypto=cons.BTC_EUR, t_hours_back=3)
+    df_tot = hist_df
+    df_tot['bids_1'] = np.vectorize(toma_1)(df_tot['bids'])
+    df_tot['asks_1'] = np.vectorize(toma_1)(df_tot['asks'])
+    df_tot['time_1'] = np.vectorize(fechas_time)(df_tot['time'])
+    df_tot = df_tot.sort_values('time_1', ascending=True)
+    df_tot = df_tot[['time_1', 'bids_1', 'asks_1']].reset_index()
 
+    ordenes = hist_df[['bids', 'asks', 'sequence']].to_dict(orient='records')
+    bids = [x[0][0] for x in list(hist_df['bids'].values)]
+    asks = [x[0][0] for x in list(hist_df['asks'].values)]
 
+    # MEDIAS EXP HISTORICAS
+    fechas = [x for x in df_tot['time_1']]
 
-    hist_df = historic_df(param['crypto'], param['api_url'], auth, param['pag_historic'])
+    # ### PINTAR GRAFICAS ###
+    grafica = True
+    len(fechas)
+    len(asks)
+    len(df_tot)
+    len(ordenes)
+    if grafica:
+        df_hist_exp = df_medias_bids_asks(asks, crypto, fechas, n_rapida_asks, n_lenta_asks)
+        pintar_grafica(df_hist_exp, crypto)
+    else:
+        pass
 
-    crypto_quantity = math.trunc(disp_ini[crypto_short] * 100) / 100
-    eur = math.trunc(disp_ini['EUR'] * 100) / 100
+    # todo be continue... cambiar crypto a btc... comprobar len dataframes
+
 

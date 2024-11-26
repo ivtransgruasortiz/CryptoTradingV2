@@ -115,6 +115,7 @@ def get_accounts(api_key, api_secret):
     endpoint = "/api/v3/brokerage/accounts"
     cursor = ""
     limit = 250
+    disp_ini = {}
     while is_continue:
         try:
             endpoint_path = cons.HTTPS + \
@@ -127,8 +128,9 @@ def get_accounts(api_key, api_secret):
         except Exception as e:
             logging.info(f"Error getting account details: {e}")
             break
-    myaccounts = [x["available_balance"] for x in account if x["available_balance"]["value"] != "0"]
-    return myaccounts
+    for item in account:
+        disp_ini.update({item['available_balance']['currency']: float(item['available_balance']['value'])})
+    return disp_ini
 
 
 def get_accounts_sdk(api_key, api_secret):
@@ -136,6 +138,7 @@ def get_accounts_sdk(api_key, api_secret):
     account = []
     cursor = ""
     limit = 250
+    disp_ini = {}
     while is_continue:
         try:
             client = RESTClient(api_key=api_key, api_secret=api_secret)
@@ -146,141 +149,44 @@ def get_accounts_sdk(api_key, api_secret):
         except Exception as e:
             logging.info(f"Error getting account details: {e}")
             break
-    myaccounts = [x["available_balance"] for x in account if x["available_balance"]["value"] != "0"]
-    return myaccounts
+    for item in account:
+        disp_ini.update({item['available_balance']['currency']: float(item['available_balance']['value'])})
+    return disp_ini
 
 
-def historic_df(api_key, api_secret, crypto, t_hours_back):
-    is_continue = True
-    trades = []
-    header_ks = Headers(api_key, api_secret)
-    endpoint = f"/api/v3/brokerage/products/{crypto}/ticker"
-    limit = 1000
-    date_ini = datetime.datetime.now() - datetime.timedelta(hours=t_hours_back)
-    start = ""
-    start_timestamp = ""
-    end = ""
-    vect_hist = {}
-    df_new = pd.DataFrame()
-    print('### Gathering Data... ')
-    while is_continue:
-        endpoint_path = cons.HTTPS + \
-                        cons.REQUEST_HOST + \
-                        "?".join([endpoint, header_ks.query_params(limit=limit, start=start_timestamp, end=end)])
-        r = rq.get(endpoint_path, headers=header_ks.headers(cons.GET, endpoint))
-        trades += [{'bids': [[float(x['price']), float(x['size']), 1]],
-                    'asks': [[float(x['price']), float(x['size']), 1]],
-                    'sequence': x['trade_id'],
-                    'time': x['time']} for x in r.json()['trades']]
-        start = trades[-1]['time']
-        start_datetime = datetime.datetime.strptime(start, "%Y-%m-%dT%H:%M:%S.%fZ")
-        start_timestamp = int(start_datetime.timestamp())
-        # start_unix = time.mktime(start_datetime.timetuple())*1e3 + start_datetime.microsecond/1e3
-        if date_ini > start_datetime:
-            is_continue = False
-            trades = [x for x in trades if x['time'].strptime("%Y-%m-%dT%H:%M:%S.%fZ") >
-                      date_ini]
-        print(f"date_ini: {date_ini} --- date_start: {start_datetime}")
-    return trades
-
-    # t_hours_back = 1
-    # a = historic_df(api_key, api_secret, crypto, t_hours_back)
-
-    enlace = r.headers['cursor']
-    trades = [{'bids': [[float(x['price']), float(x['size']), 1]],
-               'asks': [[float(x['price']), float(x['size']), 1]],
-               'sequence': x['trade_id'],
-               'time': x['time']} for x in r.json()]
-    for i in tqdm.trange(pag_historic):
-        r = rq.get(api_url + 'products/' + crypto + '/trades?after=%s' % enlace, auth=auth)
-        time.sleep(0.3)
-        enlace = r.headers['Cb-After']
-        valores = r.json()
-        # trades = trades + [float(x['price']) for x in r.json()]
-        trades += [{'bids': [[float(x['price']), float(x['size']), 1]],
-                    'asks': [[float(x['price']), float(x['size']), 1]],
-                    'sequence': x['trade_id'],
-                    'time': x['time'],
-                    'side': x['side']} for x in r.json()]
-    df_new = pd.DataFrame.from_dict(trades)
-    hist_df = df_new.sort_values('time')
-    return hist_df
-
-
-def historic_df_sdk(api_key, api_secret, crypto, t_hours_back):
-    is_continue = True
+def historic_df_sdk(api_key, api_secret, crypto=cons.BTC_EUR, t_hours_back=1):
     trades = []
     limit = 1000
     crypto = "BTC-EUR"
-    t_hours_back = 0.0
-    now_datetime = datetime.datetime.now()
-    end_datetime = now_datetime - datetime.timedelta(hours=t_hours_back)
-    end_timestamp = int(end_datetime.timestamp())
-    while is_continue & (end >= end_datetime):
+    t_hours_back = 1
+    end_datetime = datetime.datetime.utcnow()
+    start_datetime = end_datetime - datetime.timedelta(hours=t_hours_back)
+    start_timestamp = int(start_datetime.timestamp())
+    flag = True
+    sequence = 0
+    pbar = tqdm.tqdm(total=t_hours_back * 60)
+    while (start_datetime < end_datetime) & flag:
+        pbar.update(10)
         try:
-            print(start_datetime)
             client = RESTClient(api_key=api_key, api_secret=api_secret)
-            res = client.get_market_trades("BTC-EUR", limit=limit, end=start_timestamp)
-            account += res["accounts"]
-            is_continue = res["has_next"]
-            cursor = res["cursor"]
+            trades_list = client.get_market_trades(crypto, limit=limit, start=start_timestamp)['trades']
+            trades += [{'bids': [[float(x['price']), float(x['size']), 1]],
+                        'asks': [[float(x['price']), float(x['size']), 1]],
+                        'sequence': x['trade_id'],
+                        'time': x['time'],
+                        'side': x['side']} for x in trades_list]
+            start_datetime = datetime.datetime.strptime(trades_list[0]['time'], "%Y-%m-%dT%H:%M:%S.%fZ")
+            sequence_old = sequence
+            sequence = trades[0]['sequence']
+            flag = sequence_old != sequence
+            start_timestamp = int(start_datetime.timestamp())
         except Exception as e:
-            logging.info(f"Error getting account details: {e}")
+            logging.info(f"Error getting historic trades details: {e}")
             break
-    myaccounts = [x["available_balance"] for x in account if x["available_balance"]["value"] != "0"]
-    return myaccounts
-
-
-
-    start = ""
-    start_timestamp = ""
-    end = ""
-    vect_hist = {}
-    df_new = pd.DataFrame()
-    print('### Gathering Data... ')
-    while is_continue:
-        endpoint_path = cons.HTTPS + \
-                        cons.REQUEST_HOST + \
-                        "?".join([endpoint, header_ks.query_params(limit=limit, start=start_timestamp, end=end)])
-        r = rq.get(endpoint_path, headers=header_ks.headers(cons.GET, endpoint))
-        trades += [{'bids': [[float(x['price']), float(x['size']), 1]],
-                    'asks': [[float(x['price']), float(x['size']), 1]],
-                    'sequence': x['trade_id'],
-                    'time': x['time']} for x in r.json()['trades']]
-        start = trades[-1]['time']
-        start_datetime = datetime.datetime.strptime(start, "%Y-%m-%dT%H:%M:%S.%fZ")
-        start_timestamp = int(start_datetime.timestamp())
-        # start_unix = time.mktime(start_datetime.timetuple())*1e3 + start_datetime.microsecond/1e3
-        if date_ini > start_datetime:
-            is_continue = False
-            trades = [x for x in trades if x['time'].strptime("%Y-%m-%dT%H:%M:%S.%fZ") >
-                      date_ini]
-        print(f"date_ini: {date_ini} --- date_start: {start_datetime}")
-    return trades
-
-    # t_hours_back = 1
-    # a = historic_df(api_key, api_secret, crypto, t_hours_back)
-
-    enlace = r.headers['cursor']
-    trades = [{'bids': [[float(x['price']), float(x['size']), 1]],
-               'asks': [[float(x['price']), float(x['size']), 1]],
-               'sequence': x['trade_id'],
-               'time': x['time']} for x in r.json()]
-    for i in tqdm.trange(pag_historic):
-        r = rq.get(api_url + 'products/' + crypto + '/trades?after=%s' % enlace, auth=auth)
-        time.sleep(0.3)
-        enlace = r.headers['Cb-After']
-        valores = r.json()
-        # trades = trades + [float(x['price']) for x in r.json()]
-        trades += [{'bids': [[float(x['price']), float(x['size']), 1]],
-                    'asks': [[float(x['price']), float(x['size']), 1]],
-                    'sequence': x['trade_id'],
-                    'time': x['time'],
-                    'side': x['side']} for x in r.json()]
     df_new = pd.DataFrame.from_dict(trades)
     hist_df = df_new.sort_values('time')
+    pbar.close()
     return hist_df
-
 
 
 # def historic_df(crypto, api_url, auth, pag_historic):
