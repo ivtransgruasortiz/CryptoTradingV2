@@ -212,14 +212,15 @@ def historic_df_sdk(api_key, api_secret, crypto, t_hours_back):
     trades = []
     limit = 1000
     crypto = "BTC-EUR"
-    t_hours_back = 2
-    start_datetime = datetime.datetime.utcnow() - datetime.timedelta(hours=t_hours_back)
-    start_timestamp = int(start_datetime.timestamp())
-    while is_continue & (end_datetime >= end_datetime):
+    t_hours_back = 0.0
+    now_datetime = datetime.datetime.now()
+    end_datetime = now_datetime - datetime.timedelta(hours=t_hours_back)
+    end_timestamp = int(end_datetime.timestamp())
+    while is_continue & (end >= end_datetime):
         try:
             print(start_datetime)
             client = RESTClient(api_key=api_key, api_secret=api_secret)
-            res = client.get_market_trades("BTC-EUR", limit=limit, start=start_timestamp)
+            res = client.get_market_trades("BTC-EUR", limit=limit, end=start_timestamp)
             account += res["accounts"]
             is_continue = res["has_next"]
             cursor = res["cursor"]
