@@ -154,43 +154,35 @@ def get_accounts_sdk(api_key, api_secret):
     return disp_ini
 
 
-def historic_df_sdk(api_key, api_secret, crypto=cons.BTC_EUR, t_hours_back=1, limit=5):
-    trades = []
-    end_datetime = datetime.datetime.utcnow()
-    start_datetime = end_datetime - datetime.timedelta(hours=t_hours_back)
+def historic_df_sdk(api_key, api_secret, crypto=cons.BTC_EUR, t_hours_back=3, limit=1000):
+    start_datetime = datetime.datetime.now()  # hacia atrás en el tiempo
     start_timestamp = int(start_datetime.timestamp())
-    flag = True
-    sequence = 0
+    end_datetime = start_datetime - datetime.timedelta(hours=t_hours_back)
+    end_timestamp = int(end_datetime.timestamp())
     pbar = tqdm.tqdm(total=t_hours_back * 60)
-    while (start_datetime < end_datetime) & flag:
+    trades_list_df = pd.DataFrame()
+    print(start_datetime)
+    print(end_datetime)
+    while start_datetime >= end_datetime:
         pbar.update(10)
         try:
             client = RESTClient(api_key=api_key, api_secret=api_secret)
-            x = {'trade_id': '86589281', 'product_id': 'BTC-EUR', 'price': '89001.24', 'size': '0.00793', 'time': '2024-11-27T08:10:56.541Z', 'side': 'BUY', 'bid': '', 'ask': '', 'exchange': ''}
-            x.keys()
-            trades_list = client.get_market_trades(crypto, limit=limit, start=start_timestamp)['trades']
-            # trades_dict = {"operation": }
-            # df_trades_list = pd.DataFrame([[x] for x in trades_list])
-            if sequence_old == sequence:
-                continue
-            trades += [{'bids': [[float(x['price']), float(x['size']), 1]],
-                        'asks': [[float(x['price']), float(x['size']), 1]],
-                        'sequence': x['trade_id'],
-                        'time': x['time'],
-                        'side': x['side']} for x in trades_list]
-            start_datetime = datetime.datetime.strptime(trades_list[0]['time'], "%Y-%m-%dT%H:%M:%S.%fZ")
+            trades_list = client.get_market_trades(crypto, limit=limit, end=start_timestamp)['trades']
+            trades_list = [{"trade_id": x["trade_id"], "price": float(x['price']), "time": x["time"],
+                            "side": x["side"]} for x in trades_list]
+            trades_list_df = pd.concat([trades_list_df, pd.DataFrame(trades_list)]) \
+                .sort_values(['time', 'trade_id'], ascending=True) \
+                .drop_duplicates()
+            print(trades_list_df)
+            start_datetime = datetime.datetime.strptime(trades_list_df["time"].iloc[0],
+                                                        "%Y-%m-%dT%H:%M:%S.%fZ") + datetime.timedelta(hours=1)
             start_timestamp = int(start_datetime.timestamp())
-            sequence_old = sequence
-            sequence = trades[0]['sequence']
-            flag = sequence_old != sequence
-
+            print(start_timestamp)
         except Exception as e:
             logging.info(f"Error getting historic trades details: {e}")
             break
-    df_new = pd.DataFrame.from_dict(trades)
-    hist_df = df_new.sort_values('time')
     pbar.close()
-    return hist_df
+    return trades_list_df
 
 
 # def historic_df(crypto, api_url, auth, pag_historic):
