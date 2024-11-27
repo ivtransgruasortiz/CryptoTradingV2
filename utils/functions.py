@@ -154,11 +154,8 @@ def get_accounts_sdk(api_key, api_secret):
     return disp_ini
 
 
-def historic_df_sdk(api_key, api_secret, crypto=cons.BTC_EUR, t_hours_back=1):
+def historic_df_sdk(api_key, api_secret, crypto=cons.BTC_EUR, t_hours_back=1, limit=5):
     trades = []
-    limit = 1000
-    crypto = "BTC-EUR"
-    t_hours_back = 1
     end_datetime = datetime.datetime.utcnow()
     start_datetime = end_datetime - datetime.timedelta(hours=t_hours_back)
     start_timestamp = int(start_datetime.timestamp())
@@ -169,17 +166,24 @@ def historic_df_sdk(api_key, api_secret, crypto=cons.BTC_EUR, t_hours_back=1):
         pbar.update(10)
         try:
             client = RESTClient(api_key=api_key, api_secret=api_secret)
+            x = {'trade_id': '86589281', 'product_id': 'BTC-EUR', 'price': '89001.24', 'size': '0.00793', 'time': '2024-11-27T08:10:56.541Z', 'side': 'BUY', 'bid': '', 'ask': '', 'exchange': ''}
+            x.keys()
             trades_list = client.get_market_trades(crypto, limit=limit, start=start_timestamp)['trades']
+            # trades_dict = {"operation": }
+            # df_trades_list = pd.DataFrame([[x] for x in trades_list])
+            if sequence_old == sequence:
+                continue
             trades += [{'bids': [[float(x['price']), float(x['size']), 1]],
                         'asks': [[float(x['price']), float(x['size']), 1]],
                         'sequence': x['trade_id'],
                         'time': x['time'],
                         'side': x['side']} for x in trades_list]
             start_datetime = datetime.datetime.strptime(trades_list[0]['time'], "%Y-%m-%dT%H:%M:%S.%fZ")
+            start_timestamp = int(start_datetime.timestamp())
             sequence_old = sequence
             sequence = trades[0]['sequence']
             flag = sequence_old != sequence
-            start_timestamp = int(start_datetime.timestamp())
+
         except Exception as e:
             logging.info(f"Error getting historic trades details: {e}")
             break

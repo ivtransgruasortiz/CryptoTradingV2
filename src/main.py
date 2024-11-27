@@ -129,13 +129,50 @@ if __name__ == "__main__":
     crypto_quantity = math.trunc(disp_ini_sdk[crypto_short] * 100) / 100
 
     # Historico mejorado para el script
-    hist_df = historic_df_sdk(api_key, api_secret, crypto=cons.BTC_EUR, t_hours_back=3)
+    def historic_df_sdk(api_key, api_secret, crypto=cons.BTC_EUR, t_hours_back=1, limit=5):
+        trades = []
+        crypto = cons.BTC_EUR
+        t_hours_back = 1
+        limit = 5
+        start_datetime = datetime.datetime.now()
+        end_datetime = start_datetime - datetime.timedelta(hours=t_hours_back)
+        end_timestamp = int(end_datetime.timestamp())
+        flag = True
+        sequence = 0
+        pbar = tqdm.tqdm(total=t_hours_back * 60)
+        while (start_datetime > end_datetime) & flag:
+            pbar.update(10)
+            try:
+                client = RESTClient(api_key=api_key, api_secret=api_secret)
+                trades_list = client.get_market_trades(crypto, limit=limit, end=end_timestamp)['trades']
+                trades += [{'bids': [[float(x['price']), float(x['size']), 1]],
+                            'asks': [[float(x['price']), float(x['size']), 1]],
+                            'sequence': x['trade_id'],
+                            'time': x['time'],
+                            'side': x['side']} for x in trades_list]
+                trades_df = pd.DataFrame(trades).sort_values('time', ascending=True).reset_index()
+                end_datetime = datetime.datetime.strptime(trades_list[0]['time'], "%Y-%m-%dT%H:%M:%S.%fZ")
+                end_timestamp = int(start_datetime.timestamp())
+                sequence_old = sequence
+                sequence = trades[0]['sequence']
+                flag = sequence_old != sequence
+
+            except Exception as e:
+                logging.info(f"Error getting historic trades details: {e}")
+                break
+        df_new = pd.DataFrame.from_dict(trades)
+        hist_df = df_new.sort_values('time')
+        pbar.close()
+        return hist_df
+
+    hist_df = historic_df_sdk(api_key, api_secret, crypto=cons.BTC_EUR, t_hours_back=0.5, limit=1000)
+
     df_tot = hist_df
     df_tot['bids_1'] = np.vectorize(toma_1)(df_tot['bids'])
     df_tot['asks_1'] = np.vectorize(toma_1)(df_tot['asks'])
     df_tot['time_1'] = np.vectorize(fechas_time)(df_tot['time'])
     df_tot = df_tot.sort_values('time_1', ascending=True)
-    df_tot = df_tot[['time_1', 'bids_1', 'asks_1']].reset_index()
+    df_tot = df_tot[['time_1', 'bids_1', 'asks_1']].drop_duplicates().reset_index()
 
     ordenes = hist_df[['bids', 'asks', 'sequence']].to_dict(orient='records')
     bids = [x[0][0] for x in list(hist_df['bids'].values)]
