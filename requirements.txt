@@ -13,7 +13,7 @@ pandas
 numpy
 scipy
 tqdm==4.67.0
-matplotlib
+matplotlib == 3.7.0
 tweepy==4.14.0
 coinbase-advanced-py
 

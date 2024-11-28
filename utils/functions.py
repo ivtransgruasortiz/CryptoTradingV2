@@ -5,6 +5,7 @@ import pandas as pd
 import time
 import datetime
 import json
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import requests as rq
 import hmac, hashlib, base64
@@ -155,29 +156,29 @@ def get_accounts_sdk(api_key, api_secret):
 
 
 def historic_df_sdk(api_key, api_secret, crypto=cons.BTC_EUR, t_hours_back=3, limit=1000):
-    start_datetime = datetime.datetime.now()  # hacia atrás en el tiempo
-    start_timestamp = int(start_datetime.timestamp())
-    end_datetime = start_datetime - datetime.timedelta(hours=t_hours_back)
+    end_datetime = datetime.datetime.now()  # hacia atrás en el tiempo
     end_timestamp = int(end_datetime.timestamp())
+    start_datetime = end_datetime - datetime.timedelta(hours=t_hours_back)
+    # start_timestamp = int(end_datetime.timestamp())
     pbar = tqdm.tqdm(total=t_hours_back * 60)
     trades_list_df = pd.DataFrame()
-    print(start_datetime)
-    print(end_datetime)
-    while start_datetime >= end_datetime:
+    print('\n')
+    print("start_time:", start_datetime)
+    print("end_time:", end_datetime, '\n')
+    while end_datetime >= start_datetime:
         pbar.update(10)
         try:
             client = RESTClient(api_key=api_key, api_secret=api_secret)
-            trades_list = client.get_market_trades(crypto, limit=limit, end=start_timestamp)['trades']
-            trades_list = [{"trade_id": x["trade_id"], "price": float(x['price']), "time": x["time"],
-                            "side": x["side"]} for x in trades_list]
+            trades_list = client.get_market_trades(crypto, limit=limit, end=end_timestamp)['trades']
+            trades_list = [{"trade_id": x["trade_id"], "price": float(x['price']), "size": float(x['size']),
+                            "time": x["time"], "side": x["side"]} for x in trades_list]
             trades_list_df = pd.concat([trades_list_df, pd.DataFrame(trades_list)]) \
                 .sort_values(['time', 'trade_id'], ascending=True) \
                 .drop_duplicates()
             print(trades_list_df)
-            start_datetime = datetime.datetime.strptime(trades_list_df["time"].iloc[0],
-                                                        "%Y-%m-%dT%H:%M:%S.%fZ") + datetime.timedelta(hours=1)
-            start_timestamp = int(start_datetime.timestamp())
-            print(start_timestamp)
+            end_datetime = datetime.datetime.strptime(trades_list_df["time"].iloc[0],
+                                                      "%Y-%m-%dT%H:%M:%S.%fZ") + datetime.timedelta(hours=1)
+            end_timestamp = int(end_datetime.timestamp())
         except Exception as e:
             logging.info(f"Error getting historic trades details: {e}")
             break
@@ -437,13 +438,14 @@ def pintar_grafica(df, crypto):
     :param crypto: Moneda
     :return: grafica
     '''
+    mpl.use('TkAgg')
     fig2 = plt.figure(2)
     ax2 = fig2.add_subplot(111)
     plt.plot(df['time'].values, df[crypto], label=crypto)
     ax2.plot(df['time'].values, df['expmedia_rapida'], label='expmedia_rapida')
     ax2.plot(df['time'].values, df['expmedia_lenta'], label='expmedia_lenta')
     ax2.legend()
-    plt.xticks(rotation='45')
+    plt.xticks(rotation=45)
     plt.show()
 
 

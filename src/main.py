@@ -17,9 +17,12 @@ import numpy as np
 from coinbase import jwt_generator
 from coinbase.rest import RESTClient
 
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+
 import utils.constants as cons
 from utils.functions import Headers, get_accounts, get_accounts_sdk, disposiciones_iniciales, \
-    historic_df_sdk, toma_1, fechas_time, df_medias_bids_asks, pintar_grafica
+    historic_df_sdk, toma_1, fechas_time, df_medias_bids_asks, pintar_grafica, medias_exp, sma
 
 if __name__ == "__main__":
     logging \
@@ -130,29 +133,34 @@ if __name__ == "__main__":
 
     # Historico mejorado para el script
     hist_df = historic_df_sdk(api_key, api_secret, crypto=cons.BTC_EUR, t_hours_back=3, limit=1000)
-
-    df_tot = hist_df
-    # df_tot['bids_1'] = np.vectorize(toma_1)(df_tot['bids'])
-    # df_tot['asks_1'] = np.vectorize(toma_1)(df_tot['asks'])
-    df_tot['time_1'] = np.vectorize(fechas_time)(df_tot['time'])
-    df_tot = df_tot.sort_values('time_1', ascending=True)
-    df_tot = df_tot[['time_1', 'price']].drop_duplicates().reset_index()
-
-    # todo be continue... cambiar crypto a btc... comprobar len dataframes
-
-    ordenes = hist_df[['bids', 'asks', 'sequence']].to_dict(orient='records')
+    # hist_df["bids"] = hist_df[["price", "size"]].to_numpy().tolist()
+    hist_df["bids"] = [[[x, y, z]] for x, y, z in
+                       zip(hist_df['price'], hist_df['price'], [1 for x in range(len(hist_df))])]
+    hist_df["asks"] = [[[x, y, z]] for x, y, z in
+                       zip(hist_df['price'], hist_df['price'], [1 for x in range(len(hist_df))])]
     bids = [x[0][0] for x in list(hist_df['bids'].values)]
     asks = [x[0][0] for x in list(hist_df['asks'].values)]
+    ordenes = hist_df[['bids', 'asks', 'trade_id']].to_dict(orient='records')
+
+    # Maximo numero de decimales ###
+    n_decim = max([len(str(x[0][1]).split('.')[1]) for x in list(hist_df['asks'].values)])
+
+    # Historico mejorado para el script
+    # df_tot = hist_df
+    # df_tot['time_1'] = np.vectorize(fechas_time)(df_tot['time'])
+    # df_tot = df_tot.sort_values('time_1', ascending=True)
+    # df_tot = df_tot[['time_1', 'price']].drop_duplicates().reset_index()
+    df_tot = hist_df
+    df_tot['bids_1'] = np.vectorize(toma_1)(df_tot['bids'])
+    df_tot['asks_1'] = np.vectorize(toma_1)(df_tot['asks'])
+    df_tot['time_1'] = np.vectorize(fechas_time)(df_tot['time'])
+    df_tot = df_tot.sort_values('time_1', ascending=True).reset_index()
+    df_tot = df_tot[['time_1', 'bids_1', 'asks_1']]
 
     # MEDIAS EXP HISTORICAS
     fechas = [x for x in df_tot['time_1']]
 
     # ### PINTAR GRAFICAS ###
-    grafica = True
-    len(fechas)
-    len(asks)
-    len(df_tot)
-    len(ordenes)
     if grafica:
         df_hist_exp = df_medias_bids_asks(asks, crypto, fechas, n_rapida_asks, n_lenta_asks)
         pintar_grafica(df_hist_exp, crypto)
