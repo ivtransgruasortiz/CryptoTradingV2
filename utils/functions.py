@@ -510,8 +510,10 @@ def tramo_inv(crypto, n_tramos, lista_maximos_records, precio_instantaneo, valor
     :param valor_max_tiempo_real: valor maximo para mockear en caso de no haber datos en bbdd - max del historico
     :return:
     """
+    lista_tramos = []
     try:
-        lista_maximos = list(lista_maximos_records.find({'crypto': crypto}, {"_id": 0}))[0]['lista_maximos']
+        # lista_maximos = list(lista_maximos_records.find({'crypto': crypto}, {"_id": 0}))[0]['lista_maximos']
+        lista_maximos = lista_maximos_records
         lecturabbddmax = max(max(lista_maximos), precio_instantaneo)
         lista_tramos = [lecturabbddmax]
         for item in range(1, n_tramos + 1):
@@ -532,7 +534,7 @@ def tramo_inv(crypto, n_tramos, lista_maximos_records, precio_instantaneo, valor
             else:
                 pass
         pass
-    # print(lista_tramos)
+    print(lista_tramos)
     return [tramo_actual, lista_tramos]
 
 

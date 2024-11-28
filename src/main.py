@@ -143,21 +143,19 @@ if __name__ == "__main__":
 
     # IDENTIFICACION DE TRAMOS DE INVERSION Y DEL TRAMO INSTANTANEO
     # lista_maximos_records = db.lista_maximos_records
-    lista_maximos_records = [95000]
-    # precio_instantaneo = df_tot['bids_1'].values[-1] ## opcional, tambien ok
+    lista_maximos_records = [95000]  # LEER DE LA BBDD
     precio_instantaneo = df_tot['bids_1'].iloc(0)[-1]
     valor_max_tiempo_real = df_tot['bids_1'].max()
-    # TODO - REPENSAR TRAMOS INVERSION
-    tramo_actual = tramo_inv(crypto, n_tramos, lista_maximos_records, precio_instantaneo, valor_max_tiempo_real)
+    tramo_actual = tramo_inv(crypto, n_tramos, lista_maximos_records, precio_instantaneo, valor_max_tiempo_real)  # FALTA TOMAR LA LISTA DE MAXIMOS DE LA BBDD
 
-    ### Lectura BBDD-Last_Buy ###
-    records_ultima_compra = db.ultima_compra_records
-    last_buy_trigg = trigger_list_last_buy(records_ultima_compra, trigger_tramos, tramo_actual[0], eur,
-                                           inversion_fija_eur)
-    lista_last_buy = last_buy_trigg[0]
-    lista_last_sell = last_buy_trigg[1]
-    orden_filled_size = last_buy_trigg[2]
-    trigger = last_buy_trigg[3]
+    # ### Lectura BBDD-Last_Buy ###
+    # records_ultima_compra = db.ultima_compra_records
+    # last_buy_trigg = trigger_list_last_buy(records_ultima_compra, trigger_tramos, tramo_actual[0], eur,
+    #                                        inversion_fija_eur)
+    # lista_last_buy = last_buy_trigg[0]
+    # lista_last_sell = last_buy_trigg[1]
+    # orden_filled_size = last_buy_trigg[2]
+    # trigger = last_buy_trigg[3]
 
     ### Inicializacion y medias_exp ###
     medias_exp_rapida_bids = [medias_exp(bids[-2 * n_lenta_bids:], n_rapida_bids, n_lenta_bids)[0][-1]]
@@ -168,6 +166,7 @@ if __name__ == "__main__":
     time.sleep(5)
     t00 = time.perf_counter()
 
+    # TODO - to be continued...
     # #prueba TEST
     # contador = 0
 
