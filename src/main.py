@@ -22,7 +22,7 @@ import matplotlib.pyplot as plt
 
 import utils.constants as cons
 from utils.functions import Headers, get_accounts, get_accounts_sdk, disposiciones_iniciales, \
-    historic_df_sdk, toma_1, fechas_time, df_medias_bids_asks, pintar_grafica, medias_exp, sma
+    historic_df_sdk, toma_1, fechas_time, df_medias_bids_asks, pintar_grafica, medias_exp, sma, tramo_inv
 
 if __name__ == "__main__":
     logging \
@@ -140,3 +140,75 @@ if __name__ == "__main__":
         pintar_grafica(df_hist_exp, crypto)
     else:
         pass
+
+    # IDENTIFICACION DE TRAMOS DE INVERSION Y DEL TRAMO INSTANTANEO
+    # lista_maximos_records = db.lista_maximos_records
+    lista_maximos_records = [95000]
+    # precio_instantaneo = df_tot['bids_1'].values[-1] ## opcional, tambien ok
+    precio_instantaneo = df_tot['bids_1'].iloc(0)[-1]
+    valor_max_tiempo_real = df_tot['bids_1'].max()
+    # TODO - REPENSAR TRAMOS INVERSION
+    tramo_actual = tramo_inv(crypto, n_tramos, lista_maximos_records, precio_instantaneo, valor_max_tiempo_real)
+
+    ### Lectura BBDD-Last_Buy ###
+    records_ultima_compra = db.ultima_compra_records
+    last_buy_trigg = trigger_list_last_buy(records_ultima_compra, trigger_tramos, tramo_actual[0], eur,
+                                           inversion_fija_eur)
+    lista_last_buy = last_buy_trigg[0]
+    lista_last_sell = last_buy_trigg[1]
+    orden_filled_size = last_buy_trigg[2]
+    trigger = last_buy_trigg[3]
+
+    ### Inicializacion y medias_exp ###
+    medias_exp_rapida_bids = [medias_exp(bids[-2 * n_lenta_bids:], n_rapida_bids, n_lenta_bids)[0][-1]]
+    medias_exp_lenta_bids = [medias_exp(bids[-2 * n_lenta_bids:], n_rapida_bids, n_lenta_bids)[1][-1]]
+    medias_exp_rapida_asks = [medias_exp(asks[-2 * n_lenta_asks:], n_rapida_asks, n_lenta_asks)[0][-1]]
+    medias_exp_lenta_asks = [medias_exp(asks[-2 * n_lenta_asks:], n_rapida_asks, n_lenta_asks)[1][-1]]
+
+    time.sleep(5)
+    t00 = time.perf_counter()
+
+    # #prueba TEST
+    # contador = 0
+
+    while True:
+        try:
+            t0 = time.perf_counter()
+            tiempo_transcurrido = time.perf_counter() - t00
+            ### BidAsk ###
+            try:
+                bidask = rq.get(api_url + 'products/' + crypto + '/book?level=1')
+                bidask = bidask.json()
+                ordenes.append(bidask)
+            except Exception as e:
+                crypto_log.info(e)
+                pass
+            precio_compra_bidask = float(ordenes[-1]['bids'][0][0])
+            precio_venta_bidask = float(ordenes[-1]['asks'][0][0])
+            ### Actualizacion listas precios, df_tot y medias_exp ###
+            time_1 = datetime.datetime.utcnow().replace(tzinfo=None)
+            to_union = pd.DataFrame(
+                {'time_1': [time_1], 'bids_1': [precio_compra_bidask], 'asks_1': [precio_venta_bidask]})
+            df_tot = df_tot.append(to_union, ignore_index=True)
+            bids.append(precio_compra_bidask)
+            asks.append(precio_venta_bidask)
+            medias_exp_rapida_bids.append(ema(n_rapida_bids, bids, 2.0 / (n_rapida_bids + 1), medias_exp_rapida_bids))
+            medias_exp_lenta_bids.append(ema(n_lenta_bids, bids, 2.0 / (n_lenta_bids + 1), medias_exp_lenta_bids))
+            medias_exp_rapida_asks.append(ema(n_rapida_asks, asks, 2.0 / (n_rapida_asks + 1), medias_exp_rapida_asks))
+            medias_exp_lenta_asks.append(ema(n_lenta_asks, asks, 2.0 / (n_lenta_asks + 1), medias_exp_lenta_asks))
+            ### Limitacion tamaño lista ###
+            bids = limite_tamanio(tamanio_listas_min, factor_tamanio, bids)
+            asks = limite_tamanio(tamanio_listas_min, factor_tamanio, asks)
+            df_tot = limite_tamanio_df(tamanio_listas_min, factor_tamanio, df_tot)
+            medias_exp_rapida_bids = limite_tamanio(tamanio_listas_min, factor_tamanio, medias_exp_rapida_bids)
+            medias_exp_lenta_bids = limite_tamanio(tamanio_listas_min, factor_tamanio, medias_exp_lenta_bids)
+            medias_exp_rapida_asks = limite_tamanio(tamanio_listas_min, factor_tamanio, medias_exp_rapida_asks)
+            medias_exp_lenta_asks = limite_tamanio(tamanio_listas_min, factor_tamanio, medias_exp_lenta_asks)
+            ### FONDOS_DISPONIBLES ##
+            disp_ini = disposiciones_iniciales(api_url, auth)
+            try:
+                eur = math.trunc(disp_ini['EUR'] * 100) / 100
+            except Exception as e:
+                crypto_log.info(e)
+                eur = 0
+                pass
