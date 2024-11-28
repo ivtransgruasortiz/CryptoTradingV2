@@ -103,37 +103,15 @@ if __name__ == "__main__":
     nummax = param['nummax']
     redefinicion_max = param['redefinicion_max']
 
-    # #########################
-    # # #### CONSULTAS #######
-    # #########################
-    # # FORMA 0 - CON SDK (Software Development Kit)
-    # client = RESTClient(api_key=api_key, api_secret=api_secret)
-    # jwt_token = jwt_generator.build_ws_jwt(api_key, api_secret) # no hace falta pero como lo pongo como info
-    # accounts = client.get_accounts()[cons.ACCOUNTS]
-    # accounts_crypto = [x["available_balance"] for x in accounts if x["available_balance"]["value"] != "0"]
-    # disp_ini = disposiciones_iniciales(client)
-    # # FORMA 1 - CON CLASS ResApi
-    # endpoint = "/api/v3/brokerage/best_bid_ask"
-    # restapi = RestApi(api_key, api_secret, cons.GET, endpoint)
-    # jsonresp = restapi.rest()
-    # # FORMA 2 - CON REQUESTS
-    # endpoint = f"/api/v3/brokerage/products/{crypto}/ticker"
-    # extras = "limit=500"
-    # endpoint_path = cons.HTTPS + cons.REQUEST_HOST + endpoint + extras
-    # header_ks = Headers(api_key, api_secret)
-    # endpoint_path = cons.HTTPS + cons.REQUEST_HOST + "?".join([endpoint, header_ks.extras()])
-    # res = rq.get(endpoint_path, headers=header_ks.headers(cons.GET, endpoint))
-    # res.json()
-
     # OBTENEMOS LAS DISPOSICIONES INICIALES DE LA CUENTA
     disp_ini = get_accounts(api_key, api_secret)
     disp_ini_sdk = get_accounts_sdk(api_key, api_secret)
     eur = math.trunc(disp_ini_sdk[cons.EUR] * 100) / 100
     crypto_quantity = math.trunc(disp_ini_sdk[crypto_short] * 100) / 100
 
-    # Historico mejorado para el script
-    hist_df = historic_df_sdk(api_key, api_secret, crypto=cons.BTC_EUR, t_hours_back=3, limit=1000)
+    # HISTORICO MEJORADO PARA EL SCRIPT
     # hist_df["bids"] = hist_df[["price", "size"]].to_numpy().tolist()
+    hist_df = historic_df_sdk(api_key, api_secret, crypto=cons.BTC_EUR, t_hours_back=3, limit=1000)
     hist_df["bids"] = [[[x, y, z]] for x, y, z in
                        zip(hist_df['price'], hist_df['price'], [1 for x in range(len(hist_df))])]
     hist_df["asks"] = [[[x, y, z]] for x, y, z in
@@ -142,20 +120,16 @@ if __name__ == "__main__":
     asks = [x[0][0] for x in list(hist_df['asks'].values)]
     ordenes = hist_df[['bids', 'asks', 'trade_id']].to_dict(orient='records')
 
-    # Maximo numero de decimales ###
-    n_decim = max([len(str(x[0][1]).split('.')[1]) for x in list(hist_df['asks'].values)])
-
-    # Historico mejorado para el script
-    # df_tot = hist_df
-    # df_tot['time_1'] = np.vectorize(fechas_time)(df_tot['time'])
-    # df_tot = df_tot.sort_values('time_1', ascending=True)
-    # df_tot = df_tot[['time_1', 'price']].drop_duplicates().reset_index()
+    # HISTORICO MEJORADO PARA EL SCRIPT
     df_tot = hist_df
     df_tot['bids_1'] = np.vectorize(toma_1)(df_tot['bids'])
     df_tot['asks_1'] = np.vectorize(toma_1)(df_tot['asks'])
     df_tot['time_1'] = np.vectorize(fechas_time)(df_tot['time'])
     df_tot = df_tot.sort_values('time_1', ascending=True).reset_index()
     df_tot = df_tot[['time_1', 'bids_1', 'asks_1']]
+
+    # MAXIMO NUMERO DE DECIMALES
+    n_decim = max([len(str(x[0][1]).split('.')[1]) for x in list(hist_df['asks'].values)])
 
     # MEDIAS EXP HISTORICAS
     fechas = [x for x in df_tot['time_1']]
@@ -166,5 +140,3 @@ if __name__ == "__main__":
         pintar_grafica(df_hist_exp, crypto)
     else:
         pass
-
-
