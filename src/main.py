@@ -17,6 +17,8 @@ import numpy as np
 from coinbase import jwt_generator
 from coinbase.rest import RESTClient
 
+from tinydb import TinyDB, where
+
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
@@ -68,6 +70,70 @@ if __name__ == "__main__":
     api_key = str(os.environ.get('API_KEY'))
     api_secret = str(os.environ.get('API_SECRET')) \
         .replace("\\n", "\n")
+
+    # CREACION DDBB
+    cielo = TinyDB('cielo.db')
+    constelacion = cielo.table('constelacion')
+    tablas = cielo.tables()
+
+    constelacion.insert({'nombre': 'Casiopea',
+                         'abrev': 'CAS',
+                         'sup': 598,
+                         'obs': 'Todo el año'})  # 1
+    constelacion.insert({'nombre': 'Cefeo',
+                         'abrev': 'CEP',
+                         'sup': 500,
+                         'obs': 'Todo el año'})  # 2
+    constelacion.insert({'nombre': 'Dragón',
+                         'abrev': 'DRA',
+                         'sup': 1083,
+                         'obs': 'Todo el año'})  # 3
+    constelacion.insert_multiple([{'nombre': 'Casiopea',
+                                   'abrev': 'CAS'},
+                                  {'nombre': 'Cefeo',
+                                   'abrev': 'CEP'}])  # [1,2]
+    constelacion.insert({'nombre': 'Dragón',
+                         'abrev': 'DRA',
+                         'sup': 1083})  # 3
+    constelacion.insert_multiple({'obs': 'invierno',
+                                  'indice': ind} for ind in range(5))
+    registros = constelacion.search(where('indice') != -1)
+    constelacion.all()
+
+    registros = constelacion.all()
+    for registro in registros:
+        print(registro['nombre'],
+              registro['abrev'],
+              registro['sup'],
+              registro['obs'])
+
+    registros = constelacion.search(where('obs') == 'Todo el año')
+    for registro in registros:
+        print(registro['nombre'],
+              registro['abrev'],
+              registro['sup'],
+              registro['obs'])
+
+    try:
+        registros = constelacion.search(where('obs') == 'Todo el mes')
+        print(registros[0]['nombre'],
+              registros[0]['abrev'],
+              registros[0]['sup'],
+              registros[0]['obs'])
+    except IndexError:
+        print("No existen registros")
+
+    constelacion.update({'sup': 588}, where('nombre') == 'Cefeo')
+    constelacion.all()
+
+    constelacion.remove(where('sup') > 590)
+    constelacion.all()
+
+    constelacion.purge()
+
+    cielo.purge_tables()
+
+    cielo.close()
 
     ###########################
     # START REAL-TIME TRADING #
