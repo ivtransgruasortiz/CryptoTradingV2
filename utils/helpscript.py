@@ -55,3 +55,72 @@
 # endpoint_path = cons.HTTPS + cons.REQUEST_HOST + "?".join([endpoint, header_ks.extras()])
 # res = rq.get(endpoint_path, headers=header_ks.headers(cons.GET, endpoint))
 # res.json()
+
+
+#
+# ######################################################
+# # BBDD ###############################################
+# ######################################################
+# # CREACION DDBB
+#     cielo = TinyDB('cielo.db')
+#     constelacion = cielo.table('constelacion')
+#     tablas = cielo.tables()
+#
+#     constelacion.insert({'nombre': 'Casiopea',
+#                          'abrev': 'CAS',
+#                          'sup': 598,
+#                          'obs': 'To-do el año'})  # 1
+#     constelacion.insert({'nombre': 'Cefeo',
+#                          'abrev': 'CEP',
+#                          'sup': 500,
+#                          'obs': 'Todo el año'})  # 2
+#     constelacion.insert({'nombre': 'Dragón',
+#                          'abrev': 'DRA',
+#                          'sup': 1083,
+#                          'obs': 'Todo el año'})  # 3
+#     constelacion.insert_multiple([{'nombre': 'Casiopea',
+#                                    'abrev': 'CAS'},
+#                                   {'nombre': 'Cefeo',
+#                                    'abrev': 'CEP'}])  # [1,2]
+#     constelacion.insert({'nombre': 'Dragón',
+#                          'abrev': 'DRA',
+#                          'sup': 1083})  # 3
+#     constelacion.insert_multiple({'obs': 'invierno',
+#                                   'indice': ind} for ind in range(5))
+#     registros = constelacion.search(where('indice') != -1)
+#     constelacion.all()
+#
+#     registros = constelacion.all()
+#     for registro in registros:
+#         print(registro['nombre'],
+#               registro['abrev'],
+#               registro['sup'],
+#               registro['obs'])
+#
+#     registros = constelacion.search(where('obs') == 'Todo el año')
+#     for registro in registros:
+#         print(registro['nombre'],
+#               registro['abrev'],
+#               registro['sup'],
+#               registro['obs'])
+#
+#     try:
+#         registros = constelacion.search(where('obs') == 'Todo el mes')
+#         print(registros[0]['nombre'],
+#               registros[0]['abrev'],
+#               registros[0]['sup'],
+#               registros[0]['obs'])
+#     except IndexError:
+#         print("No existen registros")
+#
+#     constelacion.update({'sup': 588}, where('nombre') == 'Cefeo')
+#     constelacion.all()
+#
+#     constelacion.remove(where('sup') > 590)
+#     constelacion.all()
+#
+#     constelacion.purge()
+#
+#     cielo.purge_tables()
+#
+#     cielo.close()

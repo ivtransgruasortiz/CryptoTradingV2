@@ -1,38 +1,39 @@
-import logging
-import os
-
-import pandas as pd
-import time
 import datetime
 import json
-import matplotlib as mpl
-import matplotlib.pyplot as plt
-import requests as rq
-import hmac, hashlib, base64
-from requests.auth import AuthBase
-from scipy import stats
-import tqdm
-import dateutil.parser
-from dateutil import tz
-from statistics import mean
-import math
+import logging
+import random
+import secrets
 import smtplib
-from smtplib import SMTPException
+import time
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from dateutil.tz import *
 from string import ascii_lowercase
-import numpy as np
-import random
-import jwt
-from cryptography.hazmat.primitives import serialization
-import time
-import secrets
-from tinydb import TinyDB, where
 
+import dateutil.parser
+import jwt
+import math
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import requests as rq
+import tqdm
 from coinbase.rest import RESTClient
+from cryptography.fernet import Fernet
+from cryptography.hazmat.primitives import serialization
+from dateutil import tz
+from dateutil.tz import *
+from scipy import stats
 
 import utils.constants as cons
+
+
+def encrypt(message: bytes, key: bytes) -> bytes:
+    return Fernet(key).encrypt(message)
+
+
+def decrypt(token: bytes, key: bytes) -> bytes:
+    return Fernet(key).decrypt(token)
 
 
 def build_jwt(key_name, key_secret, uri):
@@ -499,6 +500,12 @@ def fechas_time(df):
     ### fecha = fecha.replace(tzinfo=None).astimezone(tz=None)
     to_zone = tz.tzlocal()
     fecha = fecha.astimezone(to_zone).replace(tzinfo=None)
+    return fecha
+
+
+def fechas_time_utc(df):
+    fecha = dateutil.parser.parse(df)
+    fecha = fecha.replace(tzinfo=None)
     return fecha
 
 

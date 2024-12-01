@@ -10,7 +10,7 @@ requests==2.32.3
 twilio==9.3.6
 PyYAML>=5.4
 pandas
-numpy
+numpy<2.0.0
 scipy
 tqdm==4.67.0
 matplotlib == 3.7.0
