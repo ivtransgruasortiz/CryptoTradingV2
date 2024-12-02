@@ -29,7 +29,7 @@ import matplotlib.pyplot as plt
 
 import utils.parameters as param
 import utils.constants as cons
-import utils.credentials as cred
+import utils.creds as cred
 from utils.functions import Headers, get_accounts, get_accounts_sdk, disposiciones_iniciales, \
     historic_df_sdk, toma_1, fechas_time, df_medias_bids_asks, pintar_grafica, medias_exp, sma, tramo_inv, \
     encrypt, decrypt, fechas_time_utc, ema, limite_tamanio, limite_tamanio_df
