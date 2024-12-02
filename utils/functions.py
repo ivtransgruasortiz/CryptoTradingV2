@@ -24,6 +24,7 @@ from cryptography.hazmat.primitives import serialization
 from dateutil import tz
 from dateutil.tz import *
 from scipy import stats
+from tinydb import TinyDB, where
 
 import utils.constants as cons
 
@@ -572,8 +573,8 @@ def tramo_inv(crypto, n_tramos, lista_maximos_records, precio_instantaneo, valor
     """
     lista_tramos = []
     try:
-        lista_maximos = list(lista_maximos_records.find({'crypto': crypto}, {"_id": 0}))[0]['lista_maximos']
-        # lista_maximos = lista_maximos_records
+        # lista_maximos = list(lista_maximos_records.find({'crypto': crypto}, {"_id": 0}))[0]['lista_maximos']
+        lista_maximos = lista_maximos_records.search(where(cons.CRYPTO) == crypto)[0][cons.LISTA_MAXIMOS]
         lecturabbddmax = max(max(lista_maximos), precio_instantaneo)
         lista_tramos = [lecturabbddmax]
         for item in range(1, n_tramos + 1):
