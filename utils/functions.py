@@ -451,24 +451,76 @@ def pintar_grafica(df, crypto):
     plt.show()
 
 
-def automated_mail(smtp, port, sender, password, receivers, subject, message):
+def automated_mail(smtp, port, sender, password, receivers, receivers_cc=[], receivers_bcc=[], subject='',
+                   message='', format='plain', files=[], mimetype="vnd.ms-excel"):
+    """
+        This function send email to a list of destination email list
+        Args:
+
+            smtp: client host string - example smtp.office365.com
+            port: port host integer - example 587
+            sender: email sender - string
+            password: password email sender - string
+            receivers: list of receipts emails - list
+            receivers_cc: list of receipts Cc emails - list
+            receivers_bcc: list of receipts BCc (hide copy) emails - list
+            subject: message subject - string
+            message: message - string
+            format: 'plain' or 'html'
+            files: list of strings with paths for files
+            mimetype: type of content sent
+
+        Returns:
+            response: response txt
+    """
     try:
         msg = MIMEMultipart()
         msg['From'] = sender
-        msg['To'] = receivers
+        msg['To'] = ', '.join(receivers)
+        msg['Cc'] = ', '.join(receivers_cc)
+        msg['Bcc'] = ', '.join(receivers_bcc)
         msg['Subject'] = subject
-        msg.attach(MIMEText(message, 'plain'))
+        msg.attach(MIMEText(message, format))
+        for path in files:
+            part = MIMEBase('application', mimetype)
+            with open(path, 'rb') as file:
+                part.set_payload(file.read())
+            encoders.encode_base64(part)
+            part.add_header('Content-Disposition', 'attachment; filename={}'.format(Path(path).name))
+            msg.attach(part)
         server = smtplib.SMTP(smtp, port)
         server.starttls()
         server.login(msg['From'], password)
-        server.sendmail(msg['From'], msg['To'], msg.as_string())
+        server.sendmail(msg['From'], receivers, msg.as_string())
         response = "Successfully sent Email"
         server.quit()
     # except SMTPException:
     except Exception as e:
         response = "Error: unable to send Email"
-        print(e)
+        logging.info(f"Error: unable to send Email - {e}")
+        print(f"Error: unable to send Email - {e}")
     return print(response)
+
+#
+# # OLD
+# def automated_mail(smtp, port, sender, password, receivers, subject, message):
+#     try:
+#         msg = MIMEMultipart()
+#         msg['From'] = sender
+#         msg['To'] = receivers
+#         msg['Subject'] = subject
+#         msg.attach(MIMEText(message, 'plain'))
+#         server = smtplib.SMTP(smtp, port)
+#         server.starttls()
+#         server.login(msg['From'], password)
+#         server.sendmail(msg['From'], msg['To'], msg.as_string())
+#         response = "Successfully sent Email"
+#         server.quit()
+#     # except SMTPException:
+#     except Exception as e:
+#         response = "Error: unable to send Email"
+#         print(e)
+#     return print(response)
 
 
 def automated_whatsapp(client, from_phone, body, to_phone):
