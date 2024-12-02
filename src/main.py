@@ -71,13 +71,14 @@ if __name__ == "__main__":
     # api_key = str(os.environ.get(cons.API_KEY))
     # api_secret = str(os.environ.get(cons.API_SECRET)) \
     #     .replace("\\n", "\n")
+    # passphrase = Fernet.generate_key()
     # token_api_key = encrypt(api_key.encode(), passphrase.encode())
     # token_api_secret = encrypt(api_secret.encode(), passphrase.encode())
 
     # PARA DESCODIFICAR
     token_api_key = cred.token_api_key
     token_api_secret = cred.token_api_secret
-    api_key =decrypt(token_api_key, passphrase.encode()).decode().replace("\\n", "\n")
+    api_key = decrypt(token_api_key, passphrase.encode()).decode().replace("\\n", "\n")
     api_secret = decrypt(token_api_secret, passphrase.encode()).decode().replace("\\n", "\n")
 
     ###########################
