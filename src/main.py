@@ -32,7 +32,7 @@ import utils.constants as cons
 import utils.creds as cred
 from utils.functions import Headers, get_accounts, get_accounts_sdk, disposiciones_iniciales, \
     historic_df_sdk, toma_1, fechas_time, df_medias_bids_asks, pintar_grafica, medias_exp, sma, tramo_inv, \
-    encrypt, decrypt, fechas_time_utc, ema, limite_tamanio, limite_tamanio_df
+    encrypt, decrypt, fechas_time_utc, ema, limite_tamanio, limite_tamanio_df, trigger_list_last_buy
 
 if __name__ == "__main__":
     logging \
@@ -140,15 +140,36 @@ if __name__ == "__main__":
         pass
 
     # IDENTIFICACION DE TRAMOS DE INVERSION Y DEL TRAMO INSTANTANEO
+    # CREACION-LECTURA DDBBs
+    cryptodb = TinyDB("cryptodb")
+    cryptodb_tables = cryptodb.tables()
+    lista_maximos_records = cryptodb.table('lista_maximos_records').all()
+    records_ultima_compra = cryptodb.table('ultima_compra_records').all()
+
+    if lista_maximos_records == []:
+        lista_maximos_records = {cons.CRYPTO: param.CRYPTO,
+                                 cons.LISTA_MAXIMOS: [95000]}
+
     # lista_maximos_records = db.lista_maximos_records
-    lista_maximos_records = [95000]  # LEER DE LA BBDD
+    # lista_maximos_records = [95000]  # LEER DE LA BBDD
     precio_instantaneo = df_tot[cons.BIDS_1].iloc(0)[-1]
     valor_max_tiempo_real = df_tot[cons.BIDS_1].max()
+
+    # TODO - REPENSAR LISTA DE MAXIMOS EN BBDD
     tramo_actual = tramo_inv(param.CRYPTO,
                              param.N_TRAMOS,
                              lista_maximos_records,
                              precio_instantaneo,
-                             valor_max_tiempo_real)  # FALTA TOMAR LA LISTA DE MAXIMOS DE LA BBDD
+                             valor_max_tiempo_real)
+    last_buy_trigg = trigger_list_last_buy(records_ultima_compra,
+                                           param.TRIGGER_TRAMOS,
+                                           tramo_actual[0],
+                                           eur,
+                                           param.INVERSION_FIJA_EUR)
+    lista_last_buy = last_buy_trigg[0]
+    lista_last_sell = last_buy_trigg[1]
+    orden_filled_size = last_buy_trigg[2]
+    trigger = last_buy_trigg[3]
 
     # # LECTURA BBDD-LAST_BUY
     # records_ultima_compra = db.ultima_compra_records
@@ -159,7 +180,7 @@ if __name__ == "__main__":
     # orden_filled_size = last_buy_trigg[2]
     # trigger = last_buy_trigg[3]
 
-    ### Inicializacion y medias_exp ###
+    # Inicializacion y medias_exp ###
     medias_exp_rapida_bids = [medias_exp(bids[-2 * param.N_LENTA_BIDS:],
                                          param.N_RAPIDA_BIDS,
                                          param.N_LENTA_BIDS)[0][-1]]
@@ -180,7 +201,7 @@ if __name__ == "__main__":
         try:
             t0 = time.perf_counter()
             tiempo_transcurrido = time.perf_counter() - t00
-            ### BidAsk ###
+            # BidAsk #
             try:
                 client = RESTClient(api_key=api_key, api_secret=api_secret)
                 bidask = client.get_product_book(product_id=param.CRYPTO, limit=1,
