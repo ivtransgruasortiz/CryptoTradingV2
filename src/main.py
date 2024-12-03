@@ -243,11 +243,10 @@ if __name__ == "__main__":
                 eur = 0
                 pass
 
-            # TODO - to be continued...
             # BBDD - ACTUALIZACION MAXIMOS HISTORICOS
-            lista_maximos_records = db.lista_maximos_records
+            lista_maximos_records = cryptodb.table(cons.LISTA_MAXIMOS_RECORDS)
             try:
-                lista_maximos = list(lista_maximos_records.find({'crypto': crypto}, {"_id": 0}))[0]['lista_maximos']
+                lista_maximos = lista_maximos_records.search(where(cons.CRYPTO) == param.CRYPTO)[0][cons.LISTA_MAXIMOS]
                 lecturabbddmax = max(lista_maximos)
                 lecturabbddmedian = math.trunc(
                     np.median(lecturabbddmax) * 100) / 100  # modificado para tomar el maximo
@@ -256,16 +255,18 @@ if __name__ == "__main__":
                 lecturabbddmax = precio_venta_bidask
                 lecturabbddmedian = math.trunc(precio_venta_bidask * 100) / 100
                 lista_maximos.append(precio_venta_bidask)
-                lista_maximos_records.insert_one({'crypto': crypto, 'lista_maximos': lista_maximos})
+                lista_maximos_records.insert({cons.CRYPTO: param.CRYPTO, cons.LISTA_MAXIMOS: lista_maximos})
                 pass
             if precio_venta_bidask > (lecturabbddmax * 1.02):
                 lista_maximos.append(precio_venta_bidask)
-                lista_maximos_records.delete_one({'crypto': crypto})
-                lista_maximos_records.insert_one({'crypto': crypto, 'lista_maximos': lista_maximos})
-            ### Tramo_actual y trigger para compras
+                # lista_maximos_records.delete_one({cons.CRYPTO: param.CRYPTO})
+                lista_maximos_records.insert({cons.CRYPTO: param.CRYPTO, cons.LISTA_MAXIMOS: lista_maximos})
+            # TRAMO_ACTUAL Y TRIGGER PARA COMPRAS
             valor_max_tiempo_real = df_tot['bids_1'].max()
-            tramo_actual = tramo_inv(crypto, n_tramos, lista_maximos_records, precio_venta_bidask,
+            tramo_actual = tramo_inv(param.CRYPTO, param.N_TRAMOS, lista_maximos_records, precio_venta_bidask,
                                      valor_max_tiempo_real)
+
+            # TODO - to be continued...
             records_ultima_compra = db.ultima_compra_records
             last_buy_trigg = trigger_list_last_buy(records_ultima_compra, trigger_tramos, tramo_actual[0], eur,
                                                    inversion_fija_eur)
