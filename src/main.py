@@ -32,7 +32,8 @@ import utils.constants as cons
 import utils.creds as cred
 from utils.functions import Headers, get_accounts, get_accounts_sdk, disposiciones_iniciales, \
     historic_df_sdk, toma_1, fechas_time, df_medias_bids_asks, pintar_grafica, medias_exp, sma, tramo_inv, \
-    encrypt, decrypt, fechas_time_utc, ema, limite_tamanio, limite_tamanio_df, trigger_list_last_buy
+    encrypt, decrypt, fechas_time_utc, ema, limite_tamanio, limite_tamanio_df, trigger_list_last_buy, \
+    bool_compras_previas, percentil, porcentaje_variacion_inst_tiempo, condiciones_buy_sell
 
 if __name__ == "__main__":
     logging \
@@ -236,8 +237,8 @@ if __name__ == "__main__":
             disp_ini_sdk = get_accounts_sdk(api_key, api_secret)
             try:
                 eur = math.trunc(disp_ini_sdk[cons.EUR] * 100) / 100
-                # crypto_quantity = math.trunc(disp_ini_sdk[crypto_short] * 100) / 100
                 crypto_quantity = round(disp_ini_sdk[crypto_short], n_decim_size)
+                # crypto_quantity = math.trunc(disp_ini_sdk[crypto_short] * 100) / 100
             except Exception as e:
                 crypto_log.info(e)
                 eur = 0
@@ -262,54 +263,56 @@ if __name__ == "__main__":
                 # lista_maximos_records.delete_one({cons.CRYPTO: param.CRYPTO})
                 lista_maximos_records.insert({cons.CRYPTO: param.CRYPTO, cons.LISTA_MAXIMOS: lista_maximos})
             # TRAMO_ACTUAL Y TRIGGER PARA COMPRAS
-            valor_max_tiempo_real = df_tot['bids_1'].max()
+            valor_max_tiempo_real = df_tot[cons.BIDS_1].max()
             tramo_actual = tramo_inv(param.CRYPTO, param.N_TRAMOS, lista_maximos_records, precio_venta_bidask,
                                      valor_max_tiempo_real)
-
-            # TODO - to be continued...
-            records_ultima_compra = db.ultima_compra_records
-            last_buy_trigg = trigger_list_last_buy(records_ultima_compra, trigger_tramos, tramo_actual[0], eur,
-                                                   inversion_fija_eur)
+            records_ultima_compra = cryptodb.table(cons.ULTIMA_COMPRA_RECORDS)
+            last_buy_trigg = trigger_list_last_buy(records_ultima_compra, param.TRIGGER_TRAMOS, tramo_actual[0], eur,
+                                                   param.INVERSION_FIJA_EUR)
             lista_last_buy = last_buy_trigg[0]
             lista_last_sell = last_buy_trigg[1]
             orden_filled_size = last_buy_trigg[2]
             trigger = last_buy_trigg[3]
-            ### Redefinicion del maximo
+
+            # REDEFINICION DEL MAXIMO
             compras_tramos_previos = bool_compras_previas(tramo_actual[0], records_ultima_compra)
-            if (tramo_actual[0] != 'tramo_1') & redefinicion_max & compras_tramos_previos:
+            if (tramo_actual[0] != cons.TRAMO_1) & param.REDEFINICION_MAX & compras_tramos_previos:
                 lecturabbddmedian = tramo_actual[1][int(tramo_actual[0].split('_')[1]) - 1]
-                margenlimit = margentramo
+                margenlimit = param.MARGENTRAMO
             else:
-                margenlimit = margenmax
+                margenlimit = param.MARGENMAX
                 pass
-            ### Ajustes de los parámetros condicionales de porcentaje de caida y tiempos de caida ###
-            parametros_caida = percentil(list(df_tot['asks_1']), time_percen_dicc, lecturabbddmedian, pmax, pmin,
-                                         margenlimit, stoptrigger, t_limit_percentile)
+            # AJUSTES DE LOS PARÁMETROS CONDICIONALES DE PORCENTAJE DE CAIDA Y TIEMPOS DE CAIDA
+            parametros_caida = percentil(list(df_tot[cons.ASKS_1]), param.TIME_PERCEN_DICC, lecturabbddmedian,
+                                         param.PMAX, param.PMIN, margenlimit, param.T_LIMIT_PERCENTILE)
             zip_param = parametros_caida[0]
             phigh = parametros_caida[1]
             plow = parametros_caida[2]
-            ### Porcentaje de variacion instantanea ###
+            # PORCENTAJE DE VARIACION INSTANTANEA
             condiciones_compra_list = []
             porcentaje_beneficio_list = []
-            porcentaje_caida = time_percen_dicc['porcentaje_caida_min']
-            tiempo_caida = time_percen_dicc['tiempo_caida_min']
+            porcentaje_caida = param.TIME_PERCEN_DICC['porcentaje_caida_min']
+            tiempo_caida = param.TIME_PERCEN_DICC['tiempo_caida_min']
             porcentaje_inst_tiempo = 0.01
+
             for parametros in list(zip_param):
+                print(parametros)
                 porcentaje_caida = parametros[0]
                 tiempo_caida = parametros[1]
                 porcentaje_beneficio = parametros[2]
                 try:
-                    porcentaje_inst_tiempo = porcentaje_variacion_inst_tiempo(df_tot, tiempo_caida, n_media,
-                                                                              'asks_1')
+                    porcentaje_inst_tiempo = porcentaje_variacion_inst_tiempo(df_tot, tiempo_caida, param.N_MEDIA,
+                                                                              cons.ASKS_1)
                 except Exception as e:
                     crypto_log.info(e)
                     print('No hay lecturas, df_tot no abarca todo el tiempo considerado')
                     porcentaje_inst_tiempo = 0.01
                     pass
-                ### COMPRAS ###
+
+                # COMPRAS
                 condiciones_compra = \
                     condiciones_buy_sell(precio_compra_bidask, precio_venta_bidask, porcentaje_caida,
-                                         porcentaje_beneficio, 'buy', trigger, lista_last_buy,
+                                         porcentaje_beneficio, cons.BUY, trigger, lista_last_buy,
                                          medias_exp_rapida_bids, medias_exp_lenta_bids,
                                          medias_exp_rapida_asks, medias_exp_lenta_asks,
                                          porcentaje_inst_tiempo)[0]
@@ -317,10 +320,11 @@ if __name__ == "__main__":
                 if condiciones_compra:
                     porcentaje_beneficio_list.append(porcentaje_beneficio)
                 else:
-                    porcentaje_beneficio_list.append(time_percen_dicc['porcentaje_beneficio_min'])
+                    porcentaje_beneficio_list.append(param.TIME_PERCEN_DICC[cons.PORCENTAJE_BENEFICIO_MIN])
             condiciones_compra = max(condiciones_compra_list)
             porcentaje_beneficio = max(porcentaje_beneficio_list)
-            # if contador == 10:  ##Para TEST
+
+            # TODO - to be continued...
             if condiciones_compra:
                 ### Orden de Compra ###
                 try:

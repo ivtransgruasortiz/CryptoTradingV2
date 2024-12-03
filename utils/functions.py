@@ -299,15 +299,10 @@ def disposiciones_iniciales(client):
     return disp_ini
 
 
-def percentil(dflista, time_percen_dicc, lecturabbddmax, pmax, pmin, margenmax, stoptrigger, t_limit_percentile):
+def percentil(dflista, time_percen_dicc, lecturabbddmax, pmax, pmin, margenmax, t_limit_percentile):
     phigh = stats.scoreatpercentile(sorted(dflista[-t_limit_percentile:]), pmax)
     plow = stats.scoreatpercentile(sorted(dflista[-t_limit_percentile:]), pmin)
-    if stoptrigger:
-        porcentaje_caida = [time_percen_dicc['porcentaje_caida_stop']]
-        tiempo_caida = [time_percen_dicc['tiempo_caida_stop']]
-        porcentaje_beneficio = [time_percen_dicc['porcentaje_beneficio_max']]
-        cond = zip(porcentaje_caida, tiempo_caida, porcentaje_beneficio)
-    elif (dflista[-1] >= phigh) | (abs(lecturabbddmax - dflista[-1]) <= margenmax * lecturabbddmax):
+    if (dflista[-1] >= phigh) | (abs(lecturabbddmax - dflista[-1]) <= margenmax * lecturabbddmax):
         porcentaje_caida = [time_percen_dicc['porcentaje_caida_max']]
         tiempo_caida = [time_percen_dicc['tiempo_caida_max']]
         porcentaje_beneficio = [time_percen_dicc['porcentaje_beneficio_min']]
@@ -362,15 +357,15 @@ def condiciones_buy_sell(precio_compra_bidask, precio_venta_bidask, porcentaje_c
                          medias_exp_rapida_asks, medias_exp_lenta_asks, porcentaje_inst_tiempo):
     condicion_media_compra = medias_exp_rapida_asks[-1] > medias_exp_lenta_asks[-1]
     condicion_media_venta = medias_exp_rapida_bids[-1] < medias_exp_lenta_bids[-1]
-    if (tipo == 'buy') & trigger & condicion_media_compra & (porcentaje_inst_tiempo < -porcentaje_caida_1):
+    if (tipo == cons.BUY) & trigger & condicion_media_compra & (porcentaje_inst_tiempo < -porcentaje_caida_1):
         condicion = True
         precio = precio_venta_bidask
-        print('buy')
-    elif (tipo == 'sell') & (not trigger) & condicion_media_venta & \
+        print(cons.BUY)
+    elif (tipo == cons.SELL) & (not trigger) & condicion_media_venta & \
             (precio_compra_bidask > last_buy[-1] * (1 + porcentaje_beneficio_1)):
         condicion = True
         precio = precio_compra_bidask
-        print('sell')
+        print(cons.SELL)
     else:
         condicion = False
         precio = None
@@ -653,7 +648,8 @@ def bool_compras_previas(tramo_actual, records):
     :param records: base de datos de db.ultima_compra_records
     :return: boolean
     """
-    lista_prev_buy = list(records.find({}, {"_id": 0}))
+    lista_prev_buy = records.all()
+    # lista_prev_buy = list(records.find({}, {"_id": 0}))
     lista_prev_buy = [x for x in lista_prev_buy if x['tramo'] != tramo_actual]
     if not lista_prev_buy:
         boolbuy = False
