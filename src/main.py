@@ -117,6 +117,9 @@ if __name__ == "__main__":
     df_tot = df_tot.sort_values(cons.TIME_1, ascending=True).reset_index()
     df_tot = df_tot[[cons.TIME_1, cons.BIDS_1, cons.ASKS_1]]
 
+    precio_instantaneo = df_tot[cons.BIDS_1].iloc(0)[-1]
+    valor_max_tiempo_real = df_tot[cons.BIDS_1].max()
+
     # MAXIMO NUMERO DE DECIMALES
     n_decim = max([len(str(x[0][0]).split('.')[1]) for x in list(hist_df[cons.ASKS].values)])
     list_sizes = [x for x in list(hist_df[cons.SIZE].values) if "." in str(x)]
@@ -148,15 +151,12 @@ if __name__ == "__main__":
         lista_maximos_records.insert({cons.CRYPTO: param.CRYPTO,
                                       cons.LISTA_MAXIMOS: [95000]})
 
-    precio_instantaneo = df_tot[cons.BIDS_1].iloc(0)[-1]
-    valor_max_tiempo_real = df_tot[cons.BIDS_1].max()
     tramo_actual = tramo_inv(param.CRYPTO,
                              param.N_TRAMOS,
                              lista_maximos_records,
                              precio_instantaneo,
                              valor_max_tiempo_real)
 
-    # TODO - to be continued...
     last_buy_trigg = trigger_list_last_buy(records_ultima_compra,
                                            param.TRIGGER_TRAMOS,
                                            tramo_actual[0],
@@ -167,16 +167,7 @@ if __name__ == "__main__":
     orden_filled_size = last_buy_trigg[2]
     trigger = last_buy_trigg[3]
 
-    # # LECTURA BBDD-LAST_BUY
-    # records_ultima_compra = db.ultima_compra_records
-    # last_buy_trigg = trigger_list_last_buy(records_ultima_compra, trigger_tramos, tramo_actual[0], eur,
-    #                                        inversion_fija_eur)
-    # lista_last_buy = last_buy_trigg[0]
-    # lista_last_sell = last_buy_trigg[1]
-    # orden_filled_size = last_buy_trigg[2]
-    # trigger = last_buy_trigg[3]
-
-    # Inicializacion y medias_exp ###
+    # INICIALIZACION Y MEDIAS_EXP
     medias_exp_rapida_bids = [medias_exp(bids[-2 * param.N_LENTA_BIDS:],
                                          param.N_RAPIDA_BIDS,
                                          param.N_LENTA_BIDS)[0][-1]]
@@ -197,7 +188,7 @@ if __name__ == "__main__":
         try:
             t0 = time.perf_counter()
             tiempo_transcurrido = time.perf_counter() - t00
-            # BidAsk #
+            # BIDASK
             try:
                 client = RESTClient(api_key=api_key, api_secret=api_secret)
                 bidask = client.get_product_book(product_id=param.CRYPTO, limit=1,
@@ -253,7 +244,7 @@ if __name__ == "__main__":
                 pass
 
             # TODO - to be continued...
-            ### BBDD - Actualizacion maximos historicos ###
+            # BBDD - ACTUALIZACION MAXIMOS HISTORICOS
             lista_maximos_records = db.lista_maximos_records
             try:
                 lista_maximos = list(lista_maximos_records.find({'crypto': crypto}, {"_id": 0}))[0]['lista_maximos']

@@ -609,7 +609,7 @@ def trigger_list_last_buy(records, trigger_tramos, tramo_actual, eur, inversion_
     :return: una lista con varios elementos
     """
     nummax = 9999999
-    lista_last_buy = list(records.find({}, {"_id": 0}))
+    lista_last_buy = records.all()
     if trigger_tramos:
         lista_last_buy = [x for x in lista_last_buy if tramo_actual == x['tramo']]
     if (lista_last_buy == []) & (eur >= inversion_fija_eur):
