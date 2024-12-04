@@ -30,12 +30,18 @@ PRICEBOOK = "pricebook"
 CRYPTODB = "cryptodb"
 LISTA_MAXIMOS_RECORDS = "lista_maximos_records"
 ULTIMA_COMPRA_RECORDS = "ultima_compra_records"
+ALL_TRADES_RECORDS = "all_trades_records"
 BUY = "buy"
 SELL = "sell"
 MARKET = "market"
 LIMIT = "limit"
 PORCENTAJE_BENEFICIO_MIN = "porcentaje_beneficio_min"
 TRAMO_1 = "tramo_1"
+ORDERS = "orders"
+ORDER_ID = 'order_id'
+RESPONSE = "response"
+ERROR_RESPONSE = 'error_response'
+FILLS = "fills"
 
 MAX_DICC = {BTC_EUR: 95000,
             ADA_EUR: 2.5

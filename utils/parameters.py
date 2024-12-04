@@ -11,7 +11,7 @@ STOPLOSSMARKER = False  # Para activar el stoploss poner a True (le entra a la f
 STOPTRIGGER = False  # Para marcar si estamos en situación de stoploss y poder cambiar condiciones de compra y venta
 TRIGGER_TWITTER = True  # Para activar/desactivar mandar twitts en twitter
 PORCENTAJE_LIMITE_STOPLOSS = 0.2  # porcentaje de caída para stoploss - ideal 0.20
-INVERSION_FIJA_EUR = 2  # cantidad en eur maximo por operación
+INVERSION_FIJA_EUR = 1  # cantidad en eur maximo por operación
 # INVERSION_FIJA_EUR = 2000  # cantidad en eur maximo por operación
 
 # CRYPTO = "BTC-EUR"  # producto

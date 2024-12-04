@@ -372,7 +372,8 @@ def condiciones_buy_sell(precio_compra_bidask, precio_venta_bidask, porcentaje_c
     return [condicion, precio]
 
 
-def buy_sell(compra_venta, crypto, tipo, api_key, api_secret, sizefunds=None, price_bidask=None):
+def buy_sell(compra_venta, crypto, tipo, api_key, api_secret, sizefunds=None, price_bidask=None, cancel=False,
+             seg_cancel=None):
     """
         :param compra_venta: 'buy' or 'sell'
         :param crypto: El producto de que se trate
@@ -381,12 +382,11 @@ def buy_sell(compra_venta, crypto, tipo, api_key, api_secret, sizefunds=None, pr
         :param api_secret: api_secret
         :param sizefunds: tamaño orden
         :param price_bidask: precio al que se quiere comprar
+        :param cancel: true or false for canceling fake orders
+        :param seg_cancel: seg for cancel fake order
         :return:
     """
     client_order_id = random_name()
-    compra_venta = cons.BUY
-    sizefunds = str(2)
-    tipo = cons.MARKET
     try:
         client = RESTClient(api_key=api_key, api_secret=api_secret)
         if (compra_venta == cons.BUY) & (tipo == cons.MARKET):
@@ -394,15 +394,15 @@ def buy_sell(compra_venta, crypto, tipo, api_key, api_secret, sizefunds=None, pr
                                             product_id=crypto,
                                             quote_size=sizefunds)
         elif (compra_venta == cons.BUY) & (tipo == cons.LIMIT):
-            order = client.orders.limit_order_gtc_buy(client_order_id=client_order_id,
-                                                      product_id=crypto,
-                                                      quote_size=sizefunds,
-                                                      limit_price=price_bidask,
-                                                      post_only=True)
+            order = client.limit_order_gtc_buy(client_order_id=client_order_id,
+                                               product_id=crypto,
+                                               quote_size=sizefunds,
+                                               limit_price=price_bidask,
+                                               post_only=True)
         elif (compra_venta == cons.SELL) & (tipo == cons.MARKET):
-            order = client.orders.market_order_sell(client_order_id=client_order_id,
-                                                    product_id=crypto,
-                                                    base_size=sizefunds)
+            order = client.market_order_sell(client_order_id=client_order_id,
+                                             product_id=crypto,
+                                             base_size=sizefunds)
         elif (compra_venta == cons.SELL) & (tipo == cons.LIMIT):
             order = client.limit_order_gtc_sell(client_order_id=client_order_id,
                                                 product_id=crypto,
@@ -413,21 +413,24 @@ def buy_sell(compra_venta, crypto, tipo, api_key, api_secret, sizefunds=None, pr
             order = []
 
         if order['success']:
-            order_id = order['response']['order_id']
+            order_id = order[cons.RESPONSE][cons.ORDER_ID]
             fills = client.get_fills(order_id=order_id)
-            print(json.dumps(fills.to_dict(), indent=2))
+            logging.info(json.dumps(fills.to_dict(), indent=2))
+            # print(json.dumps(fills.to_dict(), indent=2))
         else:
-            error_response = order['error_response']
-            print(error_response)
-
-        if order['success'] & (tipo == cons.LIMIT):
-            order_id = order['response']['order_id']
+            error_response = order[cons.ERROR_RESPONSE]
+            logging.info(error_response)
+            # print(error_response)
+        if cancel & (tipo == cons.LIMIT):
+            order_id = order[cons.RESPONSE][cons.ORDER_ID]
+            time.sleep(seg_cancel)
             client.cancel_orders(order_ids=[order_id])
+
     except Exception as e:
         time.sleep(0.1)
         order = []
         logging.info(f"Error processing order: {e}")
-        print(f"Error processing order: {e}")
+        # print(f"Error processing order: {e}")
         pass
     return order
 
