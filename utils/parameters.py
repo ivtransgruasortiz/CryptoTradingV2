@@ -1,4 +1,5 @@
 # PARAMETERS
+MARKET = True
 CRYPTO_TRADING_DB = 'crypto_trading_db'
 WHATSAPP_TWILIO_DB = 'whatsapp_twilio_db'
 MAIL_DB = 'mail_db'
@@ -13,7 +14,8 @@ PORCENTAJE_LIMITE_STOPLOSS = 0.2  # porcentaje de caída para stoploss - ideal 0
 INVERSION_FIJA_EUR = 2  # cantidad en eur maximo por operación
 # INVERSION_FIJA_EUR = 2000  # cantidad en eur maximo por operación
 
-CRYPTO = "BTC-EUR"  # producto
+# CRYPTO = "BTC-EUR"  # producto
+CRYPTO = "ADA-EUR"  # producto
 
 API_URL = 'https =//api.coinbase.com/api/v3/brokerage/'
 

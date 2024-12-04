@@ -372,50 +372,64 @@ def condiciones_buy_sell(precio_compra_bidask, precio_venta_bidask, porcentaje_c
     return [condicion, precio]
 
 
-def buy_sell(compra_venta, crypto, tipo, api_url, auth, sizefunds=None, precio=None):
-    '''
+def buy_sell(compra_venta, crypto, tipo, api_key, api_secret, sizefunds=None, price_bidask=None):
+    """
         :param compra_venta: 'buy' or 'sell'
         :param crypto: El producto de que se trate
-        :param sum_conditions: True or False, trigger para el lanzamiento si se cumplen condiciones
-        :param size_order_bidask: tamaño orden
-        :param precio_venta_bidask: precio al que se quiere comprar
         :param tipo: market or limit, por defecto, limit (market es para no especificar precio)
-        :param api_url: url de conexion
-        :param auth: auth de conexion
+        :param api_key: api_key
+        :param api_secret: api_secret
+        :param sizefunds: tamaño orden
+        :param price_bidask: precio al que se quiere comprar
         :return:
-    '''
-
-    if tipo == 'limit':
-        size_or_funds = 'size'
-    elif tipo == 'market':
-        size_or_funds = 'funds'
-    if compra_venta == 'buy':
-        order = {
-            'type': tipo,
-            size_or_funds: sizefunds,
-            "price": precio,
-            "side": compra_venta,
-            "product_id": crypto
-        }
-    elif compra_venta == 'sell':
-        size_or_funds = 'size'
-        order = {
-            'type': tipo,
-            size_or_funds: sizefunds,
-            "price": precio,
-            "side": compra_venta,
-            "product_id": crypto
-        }
+    """
+    client_order_id = random_name()
+    compra_venta = cons.BUY
+    sizefunds = str(2)
+    tipo = cons.MARKET
     try:
-        # r = rq.post(api_url + 'orders', json=order_buy, auth=auth) ##old
-        r = rq.post(api_url + 'orders', data=json.dumps(order), auth=auth)
-        ordenes = r.json()
-    except:
+        client = RESTClient(api_key=api_key, api_secret=api_secret)
+        if (compra_venta == cons.BUY) & (tipo == cons.MARKET):
+            order = client.market_order_buy(client_order_id=client_order_id,
+                                            product_id=crypto,
+                                            quote_size=sizefunds)
+        elif (compra_venta == cons.BUY) & (tipo == cons.LIMIT):
+            order = client.orders.limit_order_gtc_buy(client_order_id=client_order_id,
+                                                      product_id=crypto,
+                                                      quote_size=sizefunds,
+                                                      limit_price=price_bidask,
+                                                      post_only=True)
+        elif (compra_venta == cons.SELL) & (tipo == cons.MARKET):
+            order = client.orders.market_order_sell(client_order_id=client_order_id,
+                                                    product_id=crypto,
+                                                    base_size=sizefunds)
+        elif (compra_venta == cons.SELL) & (tipo == cons.LIMIT):
+            order = client.limit_order_gtc_sell(client_order_id=client_order_id,
+                                                product_id=crypto,
+                                                base_size=sizefunds,
+                                                limit_price=price_bidask,
+                                                post_only=True)
+        else:
+            order = []
+
+        if order['success']:
+            order_id = order['response']['order_id']
+            fills = client.get_fills(order_id=order_id)
+            print(json.dumps(fills.to_dict(), indent=2))
+        else:
+            error_response = order['error_response']
+            print(error_response)
+
+        if order['success'] & (tipo == cons.LIMIT):
+            order_id = order['response']['order_id']
+            client.cancel_orders(order_ids=[order_id])
+    except Exception as e:
         time.sleep(0.1)
-        ordenes = []
-        print('error')
+        order = []
+        logging.info(f"Error processing order: {e}")
+        print(f"Error processing order: {e}")
         pass
-    return ordenes
+    return order
 
 
 def limite_tamanio(tamanio_listas_min, factor_tamanio, lista_a_limitar):
@@ -496,6 +510,7 @@ def automated_mail(smtp, port, sender, password, receivers, receivers_cc=[], rec
         logging.info(f"Error: unable to send Email - {e}")
         print(f"Error: unable to send Email - {e}")
     return print(response)
+
 
 #
 # # OLD
@@ -637,7 +652,7 @@ def random_name():
         [list(letters.keys())[int(x)].lower() for x in a[:10]] + \
         [str(int(x)) for x in a[10:]]
     random.shuffle(b)
-    c = ''.join(b)
+    c = 'IV' + ''.join(b)
     return c
 
 

@@ -33,7 +33,7 @@ import utils.creds as cred
 from utils.functions import Headers, get_accounts, get_accounts_sdk, disposiciones_iniciales, \
     historic_df_sdk, toma_1, fechas_time, df_medias_bids_asks, pintar_grafica, medias_exp, sma, tramo_inv, \
     encrypt, decrypt, fechas_time_utc, ema, limite_tamanio, limite_tamanio_df, trigger_list_last_buy, \
-    bool_compras_previas, percentil, porcentaje_variacion_inst_tiempo, condiciones_buy_sell
+    bool_compras_previas, percentil, porcentaje_variacion_inst_tiempo, condiciones_buy_sell, buy_sell, random_name
 
 if __name__ == "__main__":
     logging \
@@ -101,7 +101,7 @@ if __name__ == "__main__":
     fees_maker = round(float('%.4f' % (float(fees[cons.MAKER_FEE_RATE]))), 4)
 
     # HISTORICO MEJORADO PARA EL SCRIPT
-    hist_df = historic_df_sdk(api_key, api_secret, crypto=cons.BTC_EUR, t_hours_back=param.T_HOURS_BACK, limit=1000)
+    hist_df = historic_df_sdk(api_key, api_secret, crypto=param.CRYPTO, t_hours_back=param.T_HOURS_BACK, limit=1000)
     hist_df[cons.BIDS] = [[[x, y]] for x, y in
                           zip(hist_df[cons.PRICE], hist_df[cons.SIZE])]
     hist_df[cons.ASKS] = [[[x, y]] for x, y in
@@ -149,8 +149,22 @@ if __name__ == "__main__":
     records_ultima_compra = cryptodb.table(cons.ULTIMA_COMPRA_RECORDS)
 
     if lista_maximos_records.all() == []:
-        lista_maximos_records.insert({cons.CRYPTO: param.CRYPTO,
-                                      cons.LISTA_MAXIMOS: [95000]})
+        for crypto in cons.MAX_DICC.keys():
+            lista_maximos_records.upsert({cons.CRYPTO: crypto,
+                                          cons.LISTA_MAXIMOS: [cons.MAX_DICC[crypto]]},
+                                         where(cons.CRYPTO) == crypto)
+    else:
+        for crypto in cons.MAX_DICC.keys():
+            if lista_maximos_records.all()[0][cons.CRYPTO] != crypto:
+                print(crypto)
+                lista_maximos_records.upsert({cons.CRYPTO: crypto,
+                                              cons.LISTA_MAXIMOS: [cons.MAX_DICC[crypto]]},
+                                             where(cons.CRYPTO) == crypto)
+
+    # # TO DELETE IN BBDD
+    # lista_maximos_records.remove((where(cons.CRYPTO) == cons.BTC_EUR) &
+    #                              (where(cons.LISTA_MAXIMOS) == [96000]))
+    # lista_maximos_records.remove((where(cons.CRYPTO)==cons.BTC_EUR) | (where(cons.CRYPTO)==cons.ADA_EUR))
 
     tramo_actual = tramo_inv(param.CRYPTO,
                              param.N_TRAMOS,
@@ -261,7 +275,8 @@ if __name__ == "__main__":
             if precio_venta_bidask > (lecturabbddmax * 1.02):
                 lista_maximos.append(precio_venta_bidask)
                 # lista_maximos_records.delete_one({cons.CRYPTO: param.CRYPTO})
-                lista_maximos_records.insert({cons.CRYPTO: param.CRYPTO, cons.LISTA_MAXIMOS: lista_maximos})
+                lista_maximos_records.upsert({cons.CRYPTO: param.CRYPTO, cons.LISTA_MAXIMOS: lista_maximos},
+                                             where(cons.CRYPTO) == param.CRYPTO)
             # TRAMO_ACTUAL Y TRIGGER PARA COMPRAS
             valor_max_tiempo_real = df_tot[cons.BIDS_1].max()
             tramo_actual = tramo_inv(param.CRYPTO, param.N_TRAMOS, lista_maximos_records, precio_venta_bidask,
@@ -296,6 +311,7 @@ if __name__ == "__main__":
             porcentaje_inst_tiempo = 0.01
 
             for parametros in list(zip_param):
+                print(list(zip_param))
                 print(parametros)
                 porcentaje_caida = parametros[0]
                 tiempo_caida = parametros[1]
@@ -324,14 +340,29 @@ if __name__ == "__main__":
             condiciones_compra = max(condiciones_compra_list)
             porcentaje_beneficio = max(porcentaje_beneficio_list)
 
-            # TODO - to be continued...
             if condiciones_compra:
-                ### Orden de Compra ###
+                # ORDEN DE COMPRA
                 try:
-                    orden_compra = buy_sell('buy', crypto, 'market', api_url, auth, inversion_fija_eur)  # MARKET
+                    orden_compra = buy_sell(cons.BUY,
+                                            param.CRYPTO,
+                                            cons.MARKET,
+                                            api_key,
+                                            api_secret,
+                                            str(param.INVERSION_FIJA_EUR))  # MARKET
+
+                    orden_venta = buy_sell(cons.SELL,
+                                            param.CRYPTO,
+                                            cons.LIMIT,
+                                            api_key,
+                                            api_secret,
+                                            str(1.78),
+                                           str(1.15))  # MARKET
+
+
+                    # TODO - to be continued...
                     time.sleep(10)
                     id_compra = orden_compra['id']
-                    id_compra_bbdd = random_name()
+
                     orden_filled = rq.get(api_url + f'fills?order_id={id_compra}', auth=auth)
                     orden_filled_size_prev = math.floor(
                         sum([float(x['size']) for x in orden_filled.json()]) * 1E5) / 1E5
@@ -339,38 +370,43 @@ if __name__ == "__main__":
                     lista_last_buy.append(precio_venta_bidask)
                     trigger = False
                     stoptrigger = False
-                    # mail
-                    subject_mail = 'CryptoTrading_v1.0 - BUY %s' % crypto
-                    message_mail = 'Compra de %s %s a un precio de %s eur -- variacion maxima instantanea = %s%% -- ' \
-                                   'phigh = %s eur -- plow = %s eur -- tramo = %s -- id_compra_bbdd = %s' \
-                                   % (orden_filled_size, crypto, precio_venta_bidask,
-                                      str(round(porcentaje_inst_tiempo * 100, 2)), str(round(phigh, 5)),
-                                      str(round(plow, 5)),
-                                      tramo_actual[0], id_compra_bbdd)
-                    automated_mail(smtp, port, sender, password, receivers, subject_mail, message_mail)
-                    # whatsapp
-                    message_whatsapp = 'Your CryptoTrading code is BUY_%s_%s_price_%s_eur_variacion_%s%%_tramo_%s_' \
-                                       'id_compra_bbdd_%s' \
-                                       % (orden_filled_size, crypto, precio_venta_bidask,
-                                          str(round(porcentaje_inst_tiempo * 100, 2)), tramo_actual[0],
-                                          id_compra_bbdd)
-                    automated_whatsapp(client_wt, from_phone, message_whatsapp, to_phone)
-                    crypto_log.info(
-                        f'COMPRA!!! precio_compra = {precio_venta_bidask} - phigh = {phigh} - plow = {plow}')
-                    crypto_log.info(porcentaje_inst_tiempo * 100)
-                    # twitter
-                    message_twitter = f'Hi!! ivcryptotrading BOT has bought {inversion_fija_eur} ' \
-                                      f'eur in {orden_filled_size} {crypto_short} at a price {precio_venta_bidask} ' \
-                                      f'eur/{crypto_short} #crypto ' \
-                                      f'@ivquantic @CoinbasePro @coinbase @bit2me @elonmusk @MundoCrypto_ES ' \
-                                      f'@healthy_pockets @wallstwolverine'
-                    if trigger_twitter:
-                        api.update_status(message_twitter)
-                    ### fees - TASAS COINBASE SEGUN MOVIMIENTOS ###
-                    fees = rq.get(api_url + 'fees', auth=auth)
-                    fees = round(float('%.4f' % (float(fees.json()['taker_fee_rate']))), 4)
-                    fees_eur_compra = round(float(orden_compra['specified_funds']) - float(orden_compra['funds']),
-                                            2)
+
+                    # # MAIL
+                    # subject_mail = 'CryptoTrading_v1.0 - BUY %s' % param.CRYPTO
+                    # message_mail = 'Compra de %s %s a un precio de %s eur -- variacion maxima instantanea = %s%% -- ' \
+                    #                'phigh = %s eur -- plow = %s eur -- tramo = %s -- id_compra_bbdd = %s' \
+                    #                % (orden_filled_size, param.CRYPTO, precio_venta_bidask,
+                    #                   str(round(porcentaje_inst_tiempo * 100, 2)), str(round(phigh, 5)),
+                    #                   str(round(plow, 5)),
+                    #                   tramo_actual[0], id_compra_bbdd)
+                    # automated_mail(smtp, port, sender, password, receivers, subject_mail, message_mail)
+                    # # WHATSAPP
+                    # message_whatsapp = 'Your CryptoTrading code is BUY_%s_%s_price_%s_eur_variacion_%s%%_tramo_%s_' \
+                    #                    'id_compra_bbdd_%s' \
+                    #                    % (orden_filled_size, crypto, precio_venta_bidask,
+                    #                       str(round(porcentaje_inst_tiempo * 100, 2)), tramo_actual[0],
+                    #                       id_compra_bbdd)
+                    # automated_whatsapp(client_wt, from_phone, message_whatsapp, to_phone)
+                    # crypto_log.info(
+                    #     f'COMPRA!!! precio_compra = {precio_venta_bidask} - phigh = {phigh} - plow = {plow}')
+                    # crypto_log.info(porcentaje_inst_tiempo * 100)
+                    # # TWITTER
+                    # message_twitter = f'Hi!! ivcryptotrading BOT has bought {inversion_fija_eur} ' \
+                    #                   f'eur in {orden_filled_size} {crypto_short} at a price {precio_venta_bidask} ' \
+                    #                   f'eur/{crypto_short} #crypto ' \
+                    #                   f'@ivquantic @CoinbasePro @coinbase @bit2me @elonmusk @MundoCrypto_ES ' \
+                    #                   f'@healthy_pockets @wallstwolverine'
+                    # if trigger_twitter:
+                    #     api.update_status(message_twitter)
+
+                    # fees - TASAS COINBASE SEGUN MOVIMIENTOS
+                    client = RESTClient(api_key=api_key, api_secret=api_secret)
+                    fees = client.get_transaction_summary()[cons.FEE_TIER]
+                    fees_pricing_tier = fees[cons.PRICING_TIER]
+                    fees_taker = round(float('%.4f' % (float(fees[cons.TAKER_FEE_RATE]))), 4)
+                    fees_maker = round(float('%.4f' % (float(fees[cons.MAKER_FEE_RATE]))), 4)
+                    fees = fees_taker if param.MARKET else fees_maker
+                    fees_eur_compra = round(float(orden_compra['specified_funds']) - float(orden_compra['funds']), 2)
                     compra_neta_eur = round(float(orden_compra['funds']), 2)
                     ### BBDD
                     records_ultima_compra = db.ultima_compra_records
