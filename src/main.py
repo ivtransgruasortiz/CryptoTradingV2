@@ -36,7 +36,8 @@ import utils.creds as cred
 from utils.functions import Headers, get_accounts, get_accounts_sdk, disposiciones_iniciales, \
     historic_df_sdk, toma_1, fechas_time, df_medias_bids_asks, pintar_grafica, medias_exp, sma, tramo_inv, \
     encrypt, decrypt, fechas_time_utc, ema, limite_tamanio, limite_tamanio_df, trigger_list_last_buy, \
-    bool_compras_previas, percentil, porcentaje_variacion_inst_tiempo, condiciones_buy_sell, buy_sell, random_name
+    bool_compras_previas, percentil, porcentaje_variacion_inst_tiempo, condiciones_buy_sell, buy_sell, random_name, \
+    stoploss
 
 if __name__ == "__main__":
     logging \
@@ -206,6 +207,7 @@ if __name__ == "__main__":
         try:
             t0 = time.perf_counter()
             tiempo_transcurrido = time.perf_counter() - t00
+
             # BIDASK
             try:
                 client = RESTClient(api_key=api_key, api_secret=api_secret)
@@ -262,7 +264,6 @@ if __name__ == "__main__":
                 pass
 
             # BBDD - ACTUALIZACION MAXIMOS HISTORICOS
-            lista_maximos_records = cryptodb.table(cons.LISTA_MAXIMOS_RECORDS)
             try:
                 lista_maximos = lista_maximos_records.search(where(cons.CRYPTO) == param.CRYPTO)[0][cons.LISTA_MAXIMOS]
                 lecturabbddmax = max(lista_maximos)
@@ -280,6 +281,7 @@ if __name__ == "__main__":
                 # lista_maximos_records.delete_one({cons.CRYPTO: param.CRYPTO})
                 lista_maximos_records.upsert({cons.CRYPTO: param.CRYPTO, cons.LISTA_MAXIMOS: lista_maximos},
                                              where(cons.CRYPTO) == param.CRYPTO)
+
             # TRAMO_ACTUAL Y TRIGGER PARA COMPRAS
             valor_max_tiempo_real = df_tot[cons.BIDS_1].max()
             tramo_actual = tramo_inv(param.CRYPTO, param.N_TRAMOS, lista_maximos_records, precio_venta_bidask,
@@ -299,12 +301,14 @@ if __name__ == "__main__":
             else:
                 margenlimit = param.MARGENMAX
                 pass
+
             # AJUSTES DE LOS PARÁMETROS CONDICIONALES DE PORCENTAJE DE CAIDA Y TIEMPOS DE CAIDA
             parametros_caida = percentil(list(df_tot[cons.ASKS_1]), param.TIME_PERCEN_DICC, lecturabbddmedian,
                                          param.PMAX, param.PMIN, margenlimit, param.T_LIMIT_PERCENTILE)
             zip_param = parametros_caida[0]
             phigh = parametros_caida[1]
             plow = parametros_caida[2]
+
             # PORCENTAJE DE VARIACION INSTANTANEA
             condiciones_compra_list = []
             porcentaje_beneficio_list = []
@@ -319,7 +323,9 @@ if __name__ == "__main__":
                 tiempo_caida = parametros[1]
                 porcentaje_beneficio = parametros[2]
                 try:
-                    porcentaje_inst_tiempo = porcentaje_variacion_inst_tiempo(df_tot, tiempo_caida, param.N_MEDIA,
+                    porcentaje_inst_tiempo = porcentaje_variacion_inst_tiempo(df_tot,
+                                                                              tiempo_caida,
+                                                                              param.N_MEDIA,
                                                                               cons.ASKS_1)
                 except Exception as e:
                     crypto_log.info(e)
@@ -342,8 +348,8 @@ if __name__ == "__main__":
             condiciones_compra = max(condiciones_compra_list)
             porcentaje_beneficio = max(porcentaje_beneficio_list)
 
+            # ORDEN DE COMPRA
             if condiciones_compra:
-                # ORDEN DE COMPRA
                 try:
                     orden_compra = buy_sell(cons.BUY,
                                             param.CRYPTO,
@@ -379,37 +385,32 @@ if __name__ == "__main__":
                     pass
 
             # TODO - to be continued...
-            # ORDENES_LANZADAS
-            try:
-                ordenes_lanzadas = rq.get(api_url + 'orders', auth=auth)
-                ordenes_lanzadas = ordenes_lanzadas.json()
-            except Exception as e:
-                crypto_log.info(e)
-                pass
-            ### VENTAS ###
-            ### STOPLOSS y Condiciones-Venta ###
-            stop = stoploss(lista_last_buy, precio_compra_bidask, porcentaje_limite_stoploss, nummax,
-                            stoplossmarker,
-                            trigger)
-            if stop:
-                stoptrigger = True
-            ## Bucle para ejecutar todas las ventas si se dan las condiciones - Para todos los tramos
-            records_ultima_compra = db.ultima_compra_records
-            lista_last_buy_bbdd = list(records_ultima_compra.find({}, {"_id": 0}))
-            lista_last_buy_tramo = [nummax]
+            # VENTAS
+            # # STOPLOSS y Condiciones-Venta
+            # stop = stoploss(lista_last_buy,
+            #                 precio_compra_bidask,
+            #                 porcentaje_limite_stoploss,
+            #                 nummax,
+            #                 stoplossmarker,
+            #                 trigger)
+            # if stop:
+            #     stoptrigger = True
+
+            # BUCLE PARA EJECUTAR TODAS LAS VENTAS SI SE DAN LAS CONDICIONES - PARA TODOS LOS TRAMOS
+            lista_last_buy_bbdd = records_ultima_compra.all()
+            lista_last_buy_tramo = [param.NUMMAX]
             if not lista_last_buy_bbdd:
                 trigger = True
             for compra in lista_last_buy_bbdd:
                 try:
                     trigger = False
-                    lista_last_buy_tramo = [compra['last_buy']]
-                    tramo_actual_compra = compra['tramo']
                     id_compra_bbdd = compra['id_compra_bbdd']
                     orden_filled_size = compra['orden_filled_size']
+                    orden_filled_price = [compra['orden_filled_price']]
                     porcentaje_beneficio = compra['porcentaje_beneficio']
-                    compra_neta_eur = compra['compra_neta_eur']
+                    tramo_actual_compra = compra['tramo']
                 except Exception as e:
-                    lista_last_buy_tramo = [nummax]
+                    lista_last_buy_tramo = [param.NUMMAX]
                     trigger = True
                     id_compra_bbdd = None
                     orden_filled_size = None
