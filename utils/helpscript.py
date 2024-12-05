@@ -147,7 +147,7 @@
 #                        str(1.17))  # LIMIT SELL
 
 
-# # MAIL
+# # MAIL - COMPRA
 # subject_mail = 'CryptoTrading_v1.0 - BUY %s' % param.CRYPTO
 # message_mail = 'Compra de %s %s a un precio de %s eur -- variacion maxima instantanea = %s%% -- ' \
 #                'phigh = %s eur -- plow = %s eur -- tramo = %s -- id_compra_bbdd = %s' \
@@ -174,3 +174,30 @@
 #                   f'@healthy_pockets @wallstwolverine'
 # if trigger_twitter:
 #     api.update_status(message_twitter)
+
+# # MAIL - VENTA
+# subject_mail = 'CryptoTrading_v1.0 - SELL %s' % crypto
+# message_mail = 'Venta de %s %s a un precio de %s eur -- tramo = %s -- ' \
+#                'id_compra_bbdd = %s -- Beneficio_neto = %s eur.' \
+#                % (orden_filled_size, crypto, precio_compra_bidask, tramo_actual_compra,
+#                   id_compra_bbdd, venta_neta_eur)
+# automated_mail(smtp, port, sender, password, receivers, subject_mail, message_mail)
+# # whatsapp
+# message_whatsapp = 'Your CryptoTrading code is SELL_%s_%s_price_%s_tramo_%s_' \
+#                    'id_compra_bbdd_%s_Beneficio_neto_%s_eur.' \
+#                    % (orden_filled_size, crypto, precio_compra_bidask, tramo_actual_compra,
+#                       id_compra_bbdd, venta_neta_eur)
+# automated_whatsapp(client_wt, from_phone, message_whatsapp, to_phone)
+# crypto_log.info('VENTA!!!')
+# crypto_log.info('Ultima compra: ' + str(lista_last_buy[-1]))
+# crypto_log.info('Venta: ' + str(lista_last_sell[-1]))
+# # twitter
+# message_twitter = f'Hi!! ivcryptotrading BOT has sold {orden_filled_size} ' \
+#                   f'{crypto_short} at a price {precio_compra_bidask} eur/{crypto_short} with ' \
+#                   f'about {venta_neta_eur} eur of profit!! #crypto @ivquantic @CoinbasePro ' \
+#                   f'@coinbase @bit2me @elonmusk @MundoCrypto_ES @healthy_pockets @wallstwolverine'
+# if trigger_twitter:
+#     api.update_status(message_twitter)
+# ### BBDD
+# records_ultima_compra = db.ultima_compra_records
+# records_ultima_compra.remove({'id_compra_bbdd': {'$eq': id_compra_bbdd}}, True)

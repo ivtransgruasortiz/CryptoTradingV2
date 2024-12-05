@@ -38,10 +38,28 @@ LIMIT = "limit"
 PORCENTAJE_BENEFICIO_MIN = "porcentaje_beneficio_min"
 TRAMO_1 = "tramo_1"
 ORDERS = "orders"
-ORDER_ID = 'order_id'
+ORDER_ID = "order_id"
+CLIENT_ORDER_ID = "client_order_id"
 RESPONSE = "response"
-ERROR_RESPONSE = 'error_response'
+ERROR_RESPONSE = "error_response"
 FILLS = "fills"
+PORCENTAJE_CAIDA_MIN = "porcentaje_caida_min"
+TIEMPO_CAIDA_MIN = "tiempo_caida_min"
+ORDER = "order"
+FILLED_SIZE = "filled_size"
+AVERAGE_FILLED_PRICE = "average_filled_price"
+TOTAL_FEES = "total_fees"
+ID_COMPRA_BBDD = "id_compra_bbdd"
+ID_COMPRA_USER_BBDD = "id_compra_user_bbdd"
+ORDEN_FILLED_SIZE = "orden_filled_size"
+ORDEN_FILLED_PRICE = "orden_filled_price"
+FEES_EUR_COMPRA = "fees_eur_compra"
+FEES_CLIENT = "fees_client"
+PORCENTAJE_BENEFICIO = "porcentaje_beneficio"
+FECHA = "fecha"
+TRAMO = "tramo"
+
+
 
 MAX_DICC = {BTC_EUR: 95000,
             ADA_EUR: 2.5

@@ -37,7 +37,7 @@ from utils.functions import Headers, get_accounts, get_accounts_sdk, disposicion
     historic_df_sdk, toma_1, fechas_time, df_medias_bids_asks, pintar_grafica, medias_exp, sma, tramo_inv, \
     encrypt, decrypt, fechas_time_utc, ema, limite_tamanio, limite_tamanio_df, trigger_list_last_buy, \
     bool_compras_previas, percentil, porcentaje_variacion_inst_tiempo, condiciones_buy_sell, buy_sell, random_name, \
-    stoploss
+    stoploss, tiempo_pausa_new
 
 if __name__ == "__main__":
     logging \
@@ -176,11 +176,7 @@ if __name__ == "__main__":
                              precio_instantaneo,
                              valor_max_tiempo_real)
 
-    last_buy_trigg = trigger_list_last_buy(records_ultima_compra,
-                                           param.TRIGGER_TRAMOS,
-                                           tramo_actual[0],
-                                           eur,
-                                           param.INVERSION_FIJA_EUR)
+    last_buy_trigg = trigger_list_last_buy(records_ultima_compra, eur, param.INVERSION_FIJA_EUR)
     lista_last_buy = last_buy_trigg[0]
     lista_last_sell = last_buy_trigg[1]
     orden_filled_size = last_buy_trigg[2]
@@ -257,7 +253,6 @@ if __name__ == "__main__":
             try:
                 eur = math.trunc(disp_ini_sdk[cons.EUR] * 100) / 100
                 crypto_quantity = round(disp_ini_sdk[crypto_short], n_decim_size)
-                # crypto_quantity = math.trunc(disp_ini_sdk[crypto_short] * 100) / 100
             except Exception as e:
                 crypto_log.info(e)
                 eur = 0
@@ -267,8 +262,7 @@ if __name__ == "__main__":
             try:
                 lista_maximos = lista_maximos_records.search(where(cons.CRYPTO) == param.CRYPTO)[0][cons.LISTA_MAXIMOS]
                 lecturabbddmax = max(lista_maximos)
-                lecturabbddmedian = math.trunc(
-                    np.median(lecturabbddmax) * 100) / 100  # modificado para tomar el maximo
+                lecturabbddmedian = math.trunc(np.median(lecturabbddmax) * 100) / 100  # modificado para tomar el maximo
             except Exception as e:
                 lista_maximos = []
                 lecturabbddmax = precio_venta_bidask
@@ -278,7 +272,6 @@ if __name__ == "__main__":
                 pass
             if precio_venta_bidask > (lecturabbddmax * 1.02):
                 lista_maximos.append(precio_venta_bidask)
-                # lista_maximos_records.delete_one({cons.CRYPTO: param.CRYPTO})
                 lista_maximos_records.upsert({cons.CRYPTO: param.CRYPTO, cons.LISTA_MAXIMOS: lista_maximos},
                                              where(cons.CRYPTO) == param.CRYPTO)
 
@@ -286,21 +279,11 @@ if __name__ == "__main__":
             valor_max_tiempo_real = df_tot[cons.BIDS_1].max()
             tramo_actual = tramo_inv(param.CRYPTO, param.N_TRAMOS, lista_maximos_records, precio_venta_bidask,
                                      valor_max_tiempo_real)
-            last_buy_trigg = trigger_list_last_buy(records_ultima_compra, param.TRIGGER_TRAMOS, tramo_actual[0], eur,
-                                                   param.INVERSION_FIJA_EUR)
+            last_buy_trigg = trigger_list_last_buy(records_ultima_compra, eur, param.INVERSION_FIJA_EUR)
             lista_last_buy = last_buy_trigg[0]
             lista_last_sell = last_buy_trigg[1]
             orden_filled_size = last_buy_trigg[2]
             trigger = last_buy_trigg[3]
-
-            # REDEFINICION DEL MAXIMO
-            compras_tramos_previos = bool_compras_previas(tramo_actual[0], records_ultima_compra)
-            if (tramo_actual[0] != cons.TRAMO_1) & param.REDEFINICION_MAX & compras_tramos_previos:
-                lecturabbddmedian = tramo_actual[1][int(tramo_actual[0].split('_')[1]) - 1]
-                margenlimit = param.MARGENTRAMO
-            else:
-                margenlimit = param.MARGENMAX
-                pass
 
             # AJUSTES DE LOS PARÁMETROS CONDICIONALES DE PORCENTAJE DE CAIDA Y TIEMPOS DE CAIDA
             parametros_caida = percentil(list(df_tot[cons.ASKS_1]), param.TIME_PERCEN_DICC, lecturabbddmedian,
@@ -312,8 +295,8 @@ if __name__ == "__main__":
             # PORCENTAJE DE VARIACION INSTANTANEA
             condiciones_compra_list = []
             porcentaje_beneficio_list = []
-            porcentaje_caida = param.TIME_PERCEN_DICC['porcentaje_caida_min']
-            tiempo_caida = param.TIME_PERCEN_DICC['tiempo_caida_min']
+            porcentaje_caida = param.TIME_PERCEN_DICC[cons.PORCENTAJE_CAIDA_MIN]
+            tiempo_caida = param.TIME_PERCEN_DICC[cons.TIEMPO_CAIDA_MIN]
             porcentaje_inst_tiempo = 0.01
 
             for parametros in list(zip_param):
@@ -359,33 +342,34 @@ if __name__ == "__main__":
                                             str(param.INVERSION_FIJA_EUR))  # MARKET BUY
                     time.sleep(5)
                     id_compra = orden_compra[cons.RESPONSE][cons.ORDER_ID]
-                    id_compra_user = orden_compra[cons.RESPONSE][cons.ORDER_ID]
+                    id_compra_user = orden_compra[cons.RESPONSE][cons.CLIENT_ORDER_ID]
                     client = RESTClient(api_key=api_key, api_secret=api_secret)
                     orden_detail = client.get_order(order_id=id_compra)
-                    orden_filled_size = math.trunc(float(orden_detail["order"]["filled_size"])
+                    orden_filled_size = math.trunc(float(orden_detail[cons.ORDER][cons.FILLED_SIZE])
                                                    * 10 ** n_decim_size) / 10 ** n_decim_size
-                    orden_filled_price = math.trunc(float(orden_detail["order"]["average_filled_price"])
+                    orden_filled_price = math.trunc(float(orden_detail[cons.ORDER][cons.AVERAGE_FILLED_PRICE])
                                                     * 10 ** n_decim_price) / 10 ** n_decim_price
-                    orden_fees = math.trunc(float(orden_detail["order"]["total_fees"])
+                    orden_fees = math.trunc(float(orden_detail[cons.ORDER][cons.TOTAL_FEES])
                                             * 10 ** n_decim_price) / 10 ** n_decim_price
                     lista_last_buy.append(orden_filled_price)
                     trigger = False
                     # BBDDs
-                    records_ultima_compra.insert({'id_compra_bbdd': id_compra,
-                                                  'orden_filled_size': orden_filled_size,
-                                                  'orden_filled_price': orden_filled_price,
-                                                  'fees_eur_compra': orden_fees,
-                                                  'fees_client': fees_client,
-                                                  'porcentaje_beneficio': porcentaje_beneficio,
-                                                  'fecha': datetime.datetime.now().isoformat(),
-                                                  'tramo': tramo_actual[0]})
+                    records_ultima_compra.insert({cons.ID_COMPRA_BBDD: id_compra,
+                                                  cons.ID_COMPRA_USER_BBDD: id_compra_user,
+                                                  cons.ORDEN_FILLED_SIZE: orden_filled_size,
+                                                  cons.ORDEN_FILLED_PRICE: orden_filled_price,
+                                                  cons.FEES_EUR_COMPRA: orden_fees,
+                                                  cons.FEES_CLIENT: fees_client,
+                                                  cons.PORCENTAJE_BENEFICIO: porcentaje_beneficio,
+                                                  cons.FECHA: datetime.datetime.now().isoformat(),
+                                                  cons.TRAMO: tramo_actual[0]})
                     all_trades_records.insert(orden_compra)
                 except Exception as e:
                     crypto_log.info(e)
                     pass
 
-            # TODO - to be continued...
-            # VENTAS
+            # VENTA
+
             # # STOPLOSS y Condiciones-Venta
             # stop = stoploss(lista_last_buy,
             #                 precio_compra_bidask,
@@ -404,91 +388,61 @@ if __name__ == "__main__":
             for compra in lista_last_buy_bbdd:
                 try:
                     trigger = False
-                    id_compra_bbdd = compra['id_compra_bbdd']
-                    orden_filled_size = compra['orden_filled_size']
-                    orden_filled_price = [compra['orden_filled_price']]
-                    porcentaje_beneficio = compra['porcentaje_beneficio']
-                    tramo_actual_compra = compra['tramo']
+                    id_compra_bbdd = compra[cons.ID_COMPRA_BBDD]
+                    orden_filled_size = compra[cons.ORDEN_FILLED_SIZE]
+                    orden_filled_price = compra[cons.ORDEN_FILLED_PRICE]
+                    porcentaje_beneficio = compra[cons.PORCENTAJE_BENEFICIO]
+                    tramo_actual_compra = compra[cons.TRAMO]
                 except Exception as e:
-                    lista_last_buy_tramo = [param.NUMMAX]
                     trigger = True
                     id_compra_bbdd = None
                     orden_filled_size = None
+                    orden_filled_price = param.NUMMAX
+                    porcentaje_beneficio = None
                     tramo_actual_compra = None
-                    compra_neta_eur = None
                     print('Error lectura bbdd')
-                ## Condiciones Venta ##
+
+                # CONDICIONES VENTA
                 condiciones_venta = \
                     condiciones_buy_sell(precio_compra_bidask, precio_venta_bidask, porcentaje_caida,
-                                         porcentaje_beneficio, 'sell', trigger, lista_last_buy_tramo,
+                                         porcentaje_beneficio, cons.SELL, trigger, lista_last_buy_tramo,
                                          medias_exp_rapida_bids, medias_exp_lenta_bids,
                                          medias_exp_rapida_asks, medias_exp_lenta_asks,
                                          porcentaje_inst_tiempo)[0]
-                # if contador == 65: ##Para TEST
-                if condiciones_venta | stop:
-                    ### FONDOS_DISPONIBLES ###
-                    disp_ini = disposiciones_iniciales(api_url, auth)
+                if condiciones_venta:
+                    # ORDEN DE VENTA
                     try:
-                        funds_disp = math.trunc(disp_ini[crypto_short] * precio_compra_bidask * 100) / 100
-                    except Exception as e:
-                        crypto_log.info(e)
-                        funds_disp = 0
-                        pass
-                    ### Orden de Venta ###
-                    try:
-                        orden_filled_size = math.trunc(float(orden_filled_size) * 10 ** n_decim) / 10 ** n_decim
-                        try:
-                            time.sleep(0.5)
-                            orden_venta = buy_sell('sell', crypto, 'market', api_url, auth, orden_filled_size)
-                        except Exception as e:
-                            time.sleep(1)
-                            orden_venta = buy_sell('sell', crypto, 'market', api_url, auth, orden_filled_size)
-                            print(orden_filled_size)
-                            print(e)
-                            crypto_log.info(e)
-                        time.sleep(20)
-                        lista_last_sell.append(precio_compra_bidask)
+                        orden_venta = buy_sell(cons.SELL,
+                                               param.CRYPTO,
+                                               cons.MARKET,
+                                               api_key,
+                                               api_secret,
+                                               str(orden_filled_size))  # MARKET SELL
+                        time.sleep(5)
+                        id_venta = orden_venta[cons.RESPONSE][cons.ORDER_ID]
+                        id_venta_user = orden_venta[cons.RESPONSE][cons.CLIENT_ORDER_ID]
+                        client = RESTClient(api_key=api_key, api_secret=api_secret)
+                        orden_detail = client.get_order(order_id=id_venta)
+                        orden_filled_size = math.trunc(float(orden_detail[cons.ORDER][cons.FILLED_SIZE])
+                                                       * 10 ** n_decim_size) / 10 ** n_decim_size
+                        orden_filled_price = math.trunc(float(orden_detail[cons.ORDER][cons.AVERAGE_FILLED_PRICE])
+                                                        * 10 ** n_decim_price) / 10 ** n_decim_price
+                        orden_fees = math.trunc(float(orden_detail[cons.ORDER][cons.TOTAL_FEES])
+                                                * 10 ** n_decim_price) / 10 ** n_decim_price
+                        lista_last_sell.append(orden_filled_price)
                         trigger = True
-                        # fees - TASAS COINBASE SEGUN MOVIMIENTOS
-                        fees = rq.get(api_url + 'fees', auth=auth)
-                        fees = round(float('%.4f' % (float(fees.json()['taker_fee_rate']))), 4)
-                        fees_eur_venta = round(fees * precio_compra_bidask * orden_filled_size, 2)
-                        venta_neta_eur = round((precio_compra_bidask * orden_filled_size) - fees_eur_venta -
-                                               compra_neta_eur, 2)
-                        # mail
-                        subject_mail = 'CryptoTrading_v1.0 - SELL %s' % crypto
-                        message_mail = 'Venta de %s %s a un precio de %s eur -- tramo = %s -- ' \
-                                       'id_compra_bbdd = %s -- Beneficio_neto = %s eur.' \
-                                       % (orden_filled_size, crypto, precio_compra_bidask, tramo_actual_compra,
-                                          id_compra_bbdd, venta_neta_eur)
-                        automated_mail(smtp, port, sender, password, receivers, subject_mail, message_mail)
-                        # whatsapp
-                        message_whatsapp = 'Your CryptoTrading code is SELL_%s_%s_price_%s_tramo_%s_' \
-                                           'id_compra_bbdd_%s_Beneficio_neto_%s_eur.' \
-                                           % (orden_filled_size, crypto, precio_compra_bidask, tramo_actual_compra,
-                                              id_compra_bbdd, venta_neta_eur)
-                        automated_whatsapp(client_wt, from_phone, message_whatsapp, to_phone)
-                        crypto_log.info('VENTA!!!')
-                        crypto_log.info('Ultima compra: ' + str(lista_last_buy[-1]))
-                        crypto_log.info('Venta: ' + str(lista_last_sell[-1]))
-                        # twitter
-                        message_twitter = f'Hi!! ivcryptotrading BOT has sold {orden_filled_size} ' \
-                                          f'{crypto_short} at a price {precio_compra_bidask} eur/{crypto_short} with ' \
-                                          f'about {venta_neta_eur} eur of profit!! #crypto @ivquantic @CoinbasePro ' \
-                                          f'@coinbase @bit2me @elonmusk @MundoCrypto_ES @healthy_pockets @wallstwolverine'
-                        if trigger_twitter:
-                            api.update_status(message_twitter)
-                        ### BBDD
-                        records_ultima_compra = db.ultima_compra_records
-                        records_ultima_compra.remove({'id_compra_bbdd': {'$eq': id_compra_bbdd}}, True)
+
+                        # BBDD
+                        records_ultima_compra.remove(where(cons.ID_COMPRA_BBDD) == id_compra_bbdd)
+                        all_trades_records.insert(orden_venta)
                     except Exception as e:
                         crypto_log.info(e)
                         pass
 
-            ### CALCULO PAUSAS ###
-            contador_ciclos += 1  ## para poder comparar hacia atrśs freq*time_required = num_ciclos hacia atras
-            time.sleep(tiempo_pausa_new(time.perf_counter() - t0, freq_exec))
-            # contador += 1  ##Para TEST
+            # CALCULO PAUSAS
+            contador_ciclos = param.CONTADOR_CICLOS
+            contador_ciclos += 1  # para poder comparar hacia atrśs freq*time_required = num_ciclos hacia atras
+            time.sleep(tiempo_pausa_new(time.perf_counter() - t0, param.FREQ_EXEC))
             if contador_ciclos % 360 == 0:
                 crypto_log.info(f'Numero de ciclos: {contador_ciclos}')
                 crypto_log.info(f'Precio compra bidask: {precio_compra_bidask} eur.')
@@ -499,4 +453,5 @@ if __name__ == "__main__":
         except (KeyboardInterrupt, SystemExit):  # ctrl + c
             crypto_log.info('All done')
             break
-    # FIN
+# FIN
+# TODO - to be continued...

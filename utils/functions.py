@@ -612,7 +612,7 @@ def tramo_inv(crypto, n_tramos, lista_maximos_records, precio_instantaneo, valor
     return [tramo_actual, lista_tramos]
 
 
-def trigger_list_last_buy(records, trigger_tramos, tramo_actual, eur, inversion_fija_eur):
+def trigger_list_last_buy(records, eur, inversion_fija_eur):
     """
     :param records: el json con la lectura de la bbdd
     :param trigger_tramos: trigger para activacion o no de los tramos
@@ -623,8 +623,6 @@ def trigger_list_last_buy(records, trigger_tramos, tramo_actual, eur, inversion_
     """
     nummax = 9999999
     lista_last_buy = records.all()
-    if trigger_tramos:
-        lista_last_buy = [x for x in lista_last_buy if tramo_actual == x['tramo']]
     if (lista_last_buy == []) & (eur >= inversion_fija_eur):
         orden_filled_size = 0
         lista_last_buy = [nummax]
