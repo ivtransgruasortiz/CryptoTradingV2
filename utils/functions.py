@@ -27,6 +27,7 @@ from scipy import stats
 from tinydb import TinyDB, where
 
 import utils.constants as cons
+import utils.parameters as param
 
 
 def encrypt(message: bytes, key: bytes) -> bytes:
@@ -303,25 +304,25 @@ def percentil(dflista, time_percen_dicc, lecturabbddmax, pmax, pmin, margenmax, 
     phigh = stats.scoreatpercentile(sorted(dflista[-t_limit_percentile:]), pmax)
     plow = stats.scoreatpercentile(sorted(dflista[-t_limit_percentile:]), pmin)
     if (dflista[-1] >= phigh) | (abs(lecturabbddmax - dflista[-1]) <= margenmax * lecturabbddmax):
-        porcentaje_caida = [time_percen_dicc['porcentaje_caida_max']]
-        tiempo_caida = [time_percen_dicc['tiempo_caida_max']]
-        porcentaje_beneficio = [time_percen_dicc['porcentaje_beneficio_min']]
+        porcentaje_caida = [time_percen_dicc[cons.PORCENTAJE_CAIDA_MAX]]
+        tiempo_caida = [time_percen_dicc[cons.TIEMPO_CAIDA_MAX]]
+        porcentaje_beneficio = [time_percen_dicc[cons.PORCENTAJE_BENEFICIO_MIN]]
         cond = zip(porcentaje_caida, tiempo_caida, porcentaje_beneficio)
     elif (dflista[-1] > plow) & (dflista[-1] < phigh):
-        porcentaje_caida = [time_percen_dicc['porcentaje_caida_1'],
-                            time_percen_dicc['porcentaje_caida_2']
+        porcentaje_caida = [time_percen_dicc[cons.PORCENTAJE_CAIDA_1],
+                            time_percen_dicc[cons.PORCENTAJE_CAIDA_2]
                             ]
-        tiempo_caida = [time_percen_dicc['tiempo_caida_1'],
-                        time_percen_dicc['tiempo_caida_2']
+        tiempo_caida = [time_percen_dicc[cons.TIEMPO_CAIDA_1],
+                        time_percen_dicc[cons.TIEMPO_CAIDA_2]
                         ]
-        porcentaje_beneficio = [time_percen_dicc['porcentaje_beneficio_min'],
-                                time_percen_dicc['porcentaje_beneficio_min']
+        porcentaje_beneficio = [time_percen_dicc[cons.PORCENTAJE_BENEFICIO_MIN],
+                                time_percen_dicc[cons.PORCENTAJE_BENEFICIO_MIN]
                                 ]
         cond = zip(porcentaje_caida, tiempo_caida, porcentaje_beneficio)
     else:
-        porcentaje_caida = [time_percen_dicc['porcentaje_caida_min']]
-        tiempo_caida = [time_percen_dicc['tiempo_caida_min']]
-        porcentaje_beneficio = [time_percen_dicc['porcentaje_beneficio_max']]
+        porcentaje_caida = [time_percen_dicc[cons.PORCENTAJE_CAIDA_MIN]]
+        tiempo_caida = [time_percen_dicc[cons.TIEMPO_CAIDA_MIN]]
+        porcentaje_beneficio = [time_percen_dicc[cons.PORCENTAJE_BENEFICIO_MAX]]
         cond = zip(porcentaje_caida, tiempo_caida, porcentaje_beneficio)
     return [cond, phigh, plow]
 
@@ -352,24 +353,42 @@ def stoploss(lista_last_buy, precio_instantaneo, porcentaje_limite_stoploss, num
     return stop
 
 
-def condiciones_buy_sell(precio_compra_bidask, precio_venta_bidask, porcentaje_caida_1, porcentaje_beneficio_1,
+def condiciones_buy_sell(precio_compra_bidask, precio_venta_bidask, porcentaje_caida, porcentaje_beneficio,
                          tipo, trigger, last_buy, medias_exp_rapida_bids, medias_exp_lenta_bids,
-                         medias_exp_rapida_asks, medias_exp_lenta_asks, porcentaje_inst_tiempo):
+                         medias_exp_rapida_asks, medias_exp_lenta_asks, porcentaje_inst_tiempo,
+                         eur=0, inversion_fija_eur=param.INVERSION_FIJA_EUR):
     condicion_media_compra = medias_exp_rapida_asks[-1] > medias_exp_lenta_asks[-1]
     condicion_media_venta = medias_exp_rapida_bids[-1] < medias_exp_lenta_bids[-1]
-    if (tipo == cons.BUY) & trigger & condicion_media_compra & (porcentaje_inst_tiempo < -porcentaje_caida_1):
+    condicion_fondos_suficientes = eur >= inversion_fija_eur
+    condicion_porcentaje_caida = porcentaje_inst_tiempo < -porcentaje_caida
+    try:
+        condicion_venta_superior_margen_beneficio = \
+            precio_compra_bidask > last_buy[-1][cons.ORDEN_FILLED_PRICE] * (1 + porcentaje_beneficio)
+    except TypeError as e:
+        condicion_venta_superior_margen_beneficio = \
+            precio_compra_bidask > last_buy[-1] * (1 + porcentaje_beneficio)
+        pass
+    if (tipo == cons.BUY) & condicion_fondos_suficientes & trigger & condicion_media_compra & \
+            condicion_porcentaje_caida:
         condicion = True
         precio = precio_venta_bidask
         print(cons.BUY)
-    elif (tipo == cons.SELL) & (not trigger) & condicion_media_venta & \
-            (precio_compra_bidask > last_buy[-1] * (1 + porcentaje_beneficio_1)):
+    elif (tipo == cons.SELL) & (not trigger) & condicion_media_venta & condicion_venta_superior_margen_beneficio:
         condicion = True
         precio = precio_compra_bidask
         print(cons.SELL)
     else:
         condicion = False
         precio = None
-    return [condicion, precio]
+    dicc_condiciones = {
+        "trigger": trigger,
+        "condicion_fondos_suficientes": condicion_fondos_suficientes,
+        "condicion_media_compra": condicion_media_compra,
+        "condicion_media_venta": condicion_media_venta,
+        "condicion_porcentaje_caida": condicion_porcentaje_caida,
+        "condicion_venta_superior_margen_beneficio": condicion_venta_superior_margen_beneficio
+    }
+    return [condicion, precio, dicc_condiciones]
 
 
 def buy_sell(compra_venta, crypto, tipo, api_key, api_secret, sizefunds=None, price_bidask=None, cancel=False,
@@ -608,7 +627,7 @@ def tramo_inv(crypto, n_tramos, lista_maximos_records, precio_instantaneo, valor
             else:
                 pass
         pass
-    print(lista_tramos)
+    # print(lista_tramos)
     return [tramo_actual, lista_tramos]
 
 
@@ -623,15 +642,15 @@ def trigger_list_last_buy(records, eur, inversion_fija_eur):
     """
     nummax = 9999999
     lista_last_buy = records.all()
-    if (lista_last_buy == []) & (eur >= inversion_fija_eur):
+    if lista_last_buy == []:
         orden_filled_size = 0
         lista_last_buy = [nummax]
         lista_last_sell = [nummax]
         trigger = True
     elif lista_last_buy != []:
         try:
-            orden_filled_size = lista_last_buy[-1]['orden_filled_size']
-            lista_last_buy = [lista_last_buy[-1]['last_buy']]
+            orden_filled_size = lista_last_buy[-1][cons.ORDEN_FILLED_SIZE]
+            lista_last_buy = [lista_last_buy[-1]]
         except Exception as e:
             print(e)
             orden_filled_size = 0

@@ -22,7 +22,7 @@ API_URL = 'https =//api.coinbase.com/api/v3/brokerage/'
 T_LIMIT_PERCENTILE = 28800  # tiempo hacia atrás en segundos para calcular los percentiles
 PMAX = 50  # percentil superior seguridad - ideal 50
 PMIN = 10  # percentil inferior seguridad - ideal 20
-MARGENMAX = 0.15  # Margen limite alrededor del maximo historico para operar con seguridad - ideal 0.1
+MARGENMAX = 0.10  # Margen limite alrededor del maximo historico para operar con seguridad - ideal 0.1
 MARGENTRAMO = 0.05  # Margen limite alrededor de cada maximo
 
 TIME_PERCEN_DICC = {"tiempo_caida_max": 900,

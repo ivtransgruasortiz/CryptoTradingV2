@@ -35,7 +35,6 @@ BUY = "buy"
 SELL = "sell"
 MARKET = "market"
 LIMIT = "limit"
-PORCENTAJE_BENEFICIO_MIN = "porcentaje_beneficio_min"
 TRAMO_1 = "tramo_1"
 ORDERS = "orders"
 ORDER_ID = "order_id"
@@ -58,7 +57,14 @@ FEES_CLIENT = "fees_client"
 PORCENTAJE_BENEFICIO = "porcentaje_beneficio"
 FECHA = "fecha"
 TRAMO = "tramo"
-
+PORCENTAJE_CAIDA_MAX = "porcentaje_caida_max"
+TIEMPO_CAIDA_MAX = "tiempo_caida_max"
+PORCENTAJE_BENEFICIO_MAX = "porcentaje_beneficio_max"
+PORCENTAJE_BENEFICIO_MIN = "porcentaje_beneficio_min"
+PORCENTAJE_CAIDA_1 = "porcentaje_caida_1"
+PORCENTAJE_CAIDA_2 = "porcentaje_caida_2"
+TIEMPO_CAIDA_1 = "tiempo_caida_1"
+TIEMPO_CAIDA_2 = "tiempo_caida_2"
 
 
 MAX_DICC = {BTC_EUR: 95000,

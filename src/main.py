@@ -48,6 +48,8 @@ if __name__ == "__main__":
     logging.getLogger("urllib3").setLevel(logging.WARNING)
     crypto_log = logging.getLogger("Crypto_Logging")
 
+    sys.stdout.flush()  # Para cambiar el comportamiento de los print -- sin esta línea los escribe del tirón...
+
     pd.set_option('display.max_columns', None)
     pd.set_option('display.max_rows', 20)
 
@@ -96,6 +98,7 @@ if __name__ == "__main__":
     crypto_short = param.CRYPTO.split('-')[0]
     tamanio_listas_min = param.FREQ_EXEC * param.TIME_PERCEN_DICC['tiempo_caida_1']
     ordenes_lanzadas = []
+    contador_ciclos = param.CONTADOR_CICLOS
 
     # CLIENT API
     client = RESTClient(api_key=api_key, api_secret=api_secret)
@@ -287,7 +290,7 @@ if __name__ == "__main__":
 
             # AJUSTES DE LOS PARÁMETROS CONDICIONALES DE PORCENTAJE DE CAIDA Y TIEMPOS DE CAIDA
             parametros_caida = percentil(list(df_tot[cons.ASKS_1]), param.TIME_PERCEN_DICC, lecturabbddmedian,
-                                         param.PMAX, param.PMIN, margenlimit, param.T_LIMIT_PERCENTILE)
+                                         param.PMAX, param.PMIN, param.MARGENMAX, param.T_LIMIT_PERCENTILE)
             zip_param = parametros_caida[0]
             phigh = parametros_caida[1]
             plow = parametros_caida[2]
@@ -299,9 +302,8 @@ if __name__ == "__main__":
             tiempo_caida = param.TIME_PERCEN_DICC[cons.TIEMPO_CAIDA_MIN]
             porcentaje_inst_tiempo = 0.01
 
+            dicc_cond_compraventa = []
             for parametros in list(zip_param):
-                print(list(zip_param))
-                print(parametros)
                 porcentaje_caida = parametros[0]
                 tiempo_caida = parametros[1]
                 porcentaje_beneficio = parametros[2]
@@ -322,12 +324,13 @@ if __name__ == "__main__":
                                          porcentaje_beneficio, cons.BUY, trigger, lista_last_buy,
                                          medias_exp_rapida_bids, medias_exp_lenta_bids,
                                          medias_exp_rapida_asks, medias_exp_lenta_asks,
-                                         porcentaje_inst_tiempo)[0]
-                condiciones_compra_list.append(condiciones_compra)
-                if condiciones_compra:
+                                         porcentaje_inst_tiempo, eur, param.INVERSION_FIJA_EUR)
+                condiciones_compra_list.append(condiciones_compra[0])
+                if condiciones_compra[0]:
                     porcentaje_beneficio_list.append(porcentaje_beneficio)
                 else:
                     porcentaje_beneficio_list.append(param.TIME_PERCEN_DICC[cons.PORCENTAJE_BENEFICIO_MIN])
+                dicc_cond_compraventa.append(condiciones_compra[2])
             condiciones_compra = max(condiciones_compra_list)
             porcentaje_beneficio = max(porcentaje_beneficio_list)
 
@@ -405,11 +408,11 @@ if __name__ == "__main__":
                 # CONDICIONES VENTA
                 condiciones_venta = \
                     condiciones_buy_sell(precio_compra_bidask, precio_venta_bidask, porcentaje_caida,
-                                         porcentaje_beneficio, cons.SELL, trigger, lista_last_buy_tramo,
+                                         porcentaje_beneficio, cons.SELL, trigger, lista_last_buy,
                                          medias_exp_rapida_bids, medias_exp_lenta_bids,
                                          medias_exp_rapida_asks, medias_exp_lenta_asks,
-                                         porcentaje_inst_tiempo)[0]
-                if condiciones_venta:
+                                         porcentaje_inst_tiempo)
+                if condiciones_venta[0]:
                     # ORDEN DE VENTA
                     try:
                         orden_venta = buy_sell(cons.SELL,
@@ -440,10 +443,10 @@ if __name__ == "__main__":
                         pass
 
             # CALCULO PAUSAS
-            contador_ciclos = param.CONTADOR_CICLOS
             contador_ciclos += 1  # para poder comparar hacia atrśs freq*time_required = num_ciclos hacia atras
             time.sleep(tiempo_pausa_new(time.perf_counter() - t0, param.FREQ_EXEC))
-            if contador_ciclos % 360 == 0:
+            print(contador_ciclos)
+            if contador_ciclos % 60 == 0:
                 crypto_log.info(f'Numero de ciclos: {contador_ciclos}')
                 crypto_log.info(f'Precio compra bidask: {precio_compra_bidask} eur.')
                 crypto_log.info(f'Precio venta bidask: {precio_venta_bidask} eur.')
