@@ -364,9 +364,10 @@ def condiciones_buy_sell(precio_compra_bidask, precio_venta_bidask, porcentaje_c
     try:
         condicion_venta_superior_margen_beneficio = \
             precio_compra_bidask > last_buy[-1][cons.ORDEN_FILLED_PRICE] * (1 + porcentaje_beneficio)
-    except TypeError as e:
-        condicion_venta_superior_margen_beneficio = \
-            precio_compra_bidask > last_buy[-1] * (1 + porcentaje_beneficio)
+    except IndexError as e:
+        condicion_venta_superior_margen_beneficio = False
+    finally:
+        condicion_venta_superior_margen_beneficio = False
         pass
     if (tipo == cons.BUY) & condicion_fondos_suficientes & trigger & condicion_media_compra & \
             condicion_porcentaje_caida:
@@ -631,21 +632,16 @@ def tramo_inv(crypto, n_tramos, lista_maximos_records, precio_instantaneo, valor
     return [tramo_actual, lista_tramos]
 
 
-def trigger_list_last_buy(records, eur, inversion_fija_eur):
+def trigger_list_last_buy(records):
     """
     :param records: el json con la lectura de la bbdd
-    :param trigger_tramos: trigger para activacion o no de los tramos
-    :param tramo_actual: el tramo en el que esta situado el precio actual
-    :param eur: eur disponibles en la cuenta
-    :param inversion_fija_eur: cantidad fija que se invierte en la compra
     :return: una lista con varios elementos
     """
-    nummax = 9999999
     lista_last_buy = records.all()
     if lista_last_buy == []:
         orden_filled_size = 0
-        lista_last_buy = [nummax]
-        lista_last_sell = [nummax]
+        lista_last_buy = []
+        lista_last_sell = []
         trigger = True
     elif lista_last_buy != []:
         try:
@@ -654,12 +650,12 @@ def trigger_list_last_buy(records, eur, inversion_fija_eur):
         except Exception as e:
             print(e)
             orden_filled_size = 0
-            lista_last_buy = [nummax]
-        lista_last_sell = [nummax]
+            lista_last_buy = []
+        lista_last_sell = []
         trigger = False
     else:
-        lista_last_buy = [nummax]
-        lista_last_sell = [nummax]
+        lista_last_buy = []
+        lista_last_sell = []
         orden_filled_size = 0
         trigger = False
     return [lista_last_buy, lista_last_sell, orden_filled_size, trigger]

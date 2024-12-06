@@ -166,24 +166,11 @@ if __name__ == "__main__":
                                          where(cons.CRYPTO) == crypto)
     else:
         for crypto in cons.MAX_DICC.keys():
-            if lista_maximos_records.all()[0][cons.CRYPTO] != crypto:
+            if crypto not in [x[cons.CRYPTO] for x in lista_maximos_records.all()]:
                 print(crypto)
                 lista_maximos_records.upsert({cons.CRYPTO: crypto,
                                               cons.LISTA_MAXIMOS: [cons.MAX_DICC[crypto]]},
                                              where(cons.CRYPTO) == crypto)
-
-    # IDENTIFICACION DE TRAMOS DE INVERSION Y DEL TRAMO INSTANTANEO
-    tramo_actual = tramo_inv(param.CRYPTO,
-                             param.N_TRAMOS,
-                             lista_maximos_records,
-                             precio_instantaneo,
-                             valor_max_tiempo_real)
-
-    last_buy_trigg = trigger_list_last_buy(records_ultima_compra, eur, param.INVERSION_FIJA_EUR)
-    lista_last_buy = last_buy_trigg[0]
-    lista_last_sell = last_buy_trigg[1]
-    orden_filled_size = last_buy_trigg[2]
-    trigger = last_buy_trigg[3]
 
     # INICIALIZACION Y MEDIAS_EXP
     medias_exp_rapida_bids = [medias_exp(bids[-2 * param.N_LENTA_BIDS:],
@@ -282,7 +269,7 @@ if __name__ == "__main__":
             valor_max_tiempo_real = df_tot[cons.BIDS_1].max()
             tramo_actual = tramo_inv(param.CRYPTO, param.N_TRAMOS, lista_maximos_records, precio_venta_bidask,
                                      valor_max_tiempo_real)
-            last_buy_trigg = trigger_list_last_buy(records_ultima_compra, eur, param.INVERSION_FIJA_EUR)
+            last_buy_trigg = trigger_list_last_buy(records_ultima_compra)
             lista_last_buy = last_buy_trigg[0]
             lista_last_sell = last_buy_trigg[1]
             orden_filled_size = last_buy_trigg[2]
@@ -300,7 +287,6 @@ if __name__ == "__main__":
             porcentaje_beneficio_list = []
             porcentaje_caida = param.TIME_PERCEN_DICC[cons.PORCENTAJE_CAIDA_MIN]
             tiempo_caida = param.TIME_PERCEN_DICC[cons.TIEMPO_CAIDA_MIN]
-            porcentaje_inst_tiempo = 0.01
 
             dicc_cond_compraventa = []
             for parametros in list(zip_param):
@@ -331,11 +317,11 @@ if __name__ == "__main__":
                 else:
                     porcentaje_beneficio_list.append(param.TIME_PERCEN_DICC[cons.PORCENTAJE_BENEFICIO_MIN])
                 dicc_cond_compraventa.append(condiciones_compra[2])
-            condiciones_compra = max(condiciones_compra_list)
+            condiciones_compra_total = max(condiciones_compra_list)
             porcentaje_beneficio = max(porcentaje_beneficio_list)
 
             # ORDEN DE COMPRA
-            if condiciones_compra:
+            if condiciones_compra_total:
                 try:
                     orden_compra = buy_sell(cons.BUY,
                                             param.CRYPTO,
@@ -385,7 +371,7 @@ if __name__ == "__main__":
 
             # BUCLE PARA EJECUTAR TODAS LAS VENTAS SI SE DAN LAS CONDICIONES - PARA TODOS LOS TRAMOS
             lista_last_buy_bbdd = records_ultima_compra.all()
-            lista_last_buy_tramo = [param.NUMMAX]
+            lista_last_buy_tramo = []
             if not lista_last_buy_bbdd:
                 trigger = True
             for compra in lista_last_buy_bbdd:
@@ -400,7 +386,7 @@ if __name__ == "__main__":
                     trigger = True
                     id_compra_bbdd = None
                     orden_filled_size = None
-                    orden_filled_price = param.NUMMAX
+                    orden_filled_price = None
                     porcentaje_beneficio = None
                     tramo_actual_compra = None
                     print('Error lectura bbdd')

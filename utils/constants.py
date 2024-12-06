@@ -1,12 +1,15 @@
 LOCAL_EXECUTION = "LOCAL_EXECUTION"
+EUR = "EUR"
+BTC_EUR = "BTC-EUR"
+ETH_EUR = "ETH-EUR"
+ADA_EUR = "ADA-EUR"
+LTC_EUR = "LTC-EUR"
+XTZ_EUR = "XTZ-EUR"
 HTTPS = "https://"
 ACCOUNTS = "accounts"
 REQUEST_HOST = "api.coinbase.com"
 GET = "GET"
 POST = "POST"
-EUR = "EUR"
-BTC_EUR = "BTC-EUR"
-ADA_EUR = "ADA-EUR"
 PASSPHRASE = "PASSPHRASE"
 API_KEY = "API_KEY"
 API_SECRET = "API_SECRET"
@@ -68,5 +71,6 @@ TIEMPO_CAIDA_2 = "tiempo_caida_2"
 
 
 MAX_DICC = {BTC_EUR: 95000,
+            ETH_EUR: 4500,
             ADA_EUR: 2.5
             }
