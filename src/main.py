@@ -9,6 +9,8 @@ import os
 import ssl
 import sys
 import time
+
+from coinbase.websocket import WSClient
 from dateutil import tz
 from dateutil.tz import *
 import datetime
@@ -37,19 +39,31 @@ from utils.functions import Headers, get_accounts, get_accounts_sdk, disposicion
     historic_df_sdk, toma_1, fechas_time, df_medias_bids_asks, pintar_grafica, medias_exp, sma, tramo_inv, \
     encrypt, decrypt, fechas_time_utc, ema, limite_tamanio, limite_tamanio_df, trigger_list_last_buy, \
     bool_compras_previas, percentil, porcentaje_variacion_inst_tiempo, condiciones_buy_sell, buy_sell, random_name, \
-    stoploss, tiempo_pausa_new
+    stoploss, tiempo_pausa_new, on_message
 
 if __name__ == "__main__":
-    logging \
-        .basicConfig(format='%(asctime)s %(name)s-%(levelname)s:: %(message)s',
-                     datefmt='%Y-%m-%d %H:%M:%S',
-                     level=logging.INFO)
-    logging.getLogger("requests").setLevel(logging.WARNING)
-    logging.getLogger("urllib3").setLevel(logging.WARNING)
+    # MANAGE LOGGING INFO-FILES
+    delete_logs = param.DELETE_LOGS
+    if delete_logs:
+        archivo = open('cryptologs.log', 'w')
+        archivo.close()
+    logging.basicConfig(format='%(asctime)s %(name)s-%(levelname)s:: %(message)s',
+                        datefmt='%Y-%m-%d %H:%M:%S',
+                        level=logging.INFO)
     crypto_log = logging.getLogger("Crypto_Logging")
+    formatter = logging.Formatter('%(asctime)s %(name)s-%(levelname)s:: %(message)s')
+    file_handler = logging.FileHandler('cryptologs.log')
+    file_handler.setFormatter(formatter)
+    crypto_log.addHandler(file_handler)
+    # stdout_handler = logging.StreamHandler(sys.stdout)
+    # stdout_handler.setFormatter(formatter)
+    # crypto_log.addHandler(stdout_handler)
+    crypto_log.info("START POINT!!")
 
-    sys.stdout.flush()  # Para cambiar el comportamiento de los print -- sin esta línea los escribe del tirón...
+    # PARA CAMBIAR EL COMPORTAMIENTO DE LOS PRINT -- SIN ESTA LÍNEA LOS ESCRIBE DEL TIRÓN...
+    sys.stdout.flush()
 
+    # PANDAS OPTIONS
     pd.set_option('display.max_columns', None)
     pd.set_option('display.max_rows', 20)
 
@@ -57,15 +71,15 @@ if __name__ == "__main__":
         local_execution = ast.literal_eval(os.environ.get(cons.LOCAL_EXECUTION))
     except Exception as e1:
         local_execution = False
-        logging.info(f"INFO: local_execution = False - {e1}")
+        crypto_log.info(f"INFO: local_execution = False - {e1}")
         print(f"INFO: local_execution = False - {e1}")
 
     if local_execution:
-        logging.info(f"INFO!! - Executing in local mode")
+        crypto_log.info(f"INFO!! - Executing in local mode")
         print(f"INFO!! - Executing in local mode")
         passphrase = os.getenv(cons.PASSPHRASE)
     else:
-        logging.info(f"INFO!! - Executing in host mode")
+        crypto_log.info(f"INFO!! - Executing in host mode")
         print(f"INFO!! - Executing in host mode")
         passphrase = sys.argv[1]
 
@@ -211,6 +225,8 @@ if __name__ == "__main__":
                 pass
             precio_compra_bidask = float(ordenes[-1][cons.BIDS][0][0])
             precio_venta_bidask = float(ordenes[-1][cons.ASKS][0][0])
+            precio_compra_limit = precio_venta_bidask - 1 * 10 ** -n_decim_price
+            precio_venta_limit = precio_compra_bidask + 1 * 10 ** -n_decim_price
 
             # ACTUALIZACION LISTAS PRECIOS, DF_TOT Y MEDIAS_EXP
             time_1 = datetime.datetime.utcnow().replace(tzinfo=None)
@@ -323,12 +339,28 @@ if __name__ == "__main__":
             # ORDEN DE COMPRA
             if condiciones_compra_total:
                 try:
+                    # orden_compra = buy_sell(cons.BUY,
+                    #                         param.CRYPTO,
+                    #                         cons.MARKET,
+                    #                         api_key,
+                    #                         api_secret,
+                    #                         sizefunds=str(param.INVERSION_FIJA_EUR))  # MARKET BUY
                     orden_compra = buy_sell(cons.BUY,
                                             param.CRYPTO,
-                                            cons.MARKET,
+                                            cons.LIMIT,
                                             api_key,
                                             api_secret,
-                                            str(param.INVERSION_FIJA_EUR))  # MARKET BUY
+                                            sizefunds=str(param.INVERSION_FIJA_EUR),
+                                            price_bidask=precio_compra_limit)  # LIMIT BUY
+                    limit_order_id = ""
+                    order_filled = False
+                    ws_client = WSClient(api_key=api_key, api_secret=api_secret, on_message=on_message, verbose=True)
+                    ws_client.open()
+                    ws_client.subscribe([param.CRYPTO], ["heartbeats", "user"])
+                    while not order_filled:
+                        ws_client.sleep_with_exception_check(1)
+                    print(f"order {limit_order_id} filled!")
+                    ws_client.close()
                     time.sleep(5)
                     id_compra = orden_compra[cons.RESPONSE][cons.ORDER_ID]
                     id_compra_user = orden_compra[cons.RESPONSE][cons.CLIENT_ORDER_ID]
@@ -401,12 +433,29 @@ if __name__ == "__main__":
                 if condiciones_venta[0]:
                     # ORDEN DE VENTA
                     try:
+                        # orden_venta = buy_sell(cons.SELL,
+                        #                        param.CRYPTO,
+                        #                        cons.MARKET,
+                        #                        api_key,
+                        #                        api_secret,
+                        #                        str(orden_filled_size))  # MARKET SELL
                         orden_venta = buy_sell(cons.SELL,
                                                param.CRYPTO,
-                                               cons.MARKET,
+                                               cons.LIMIT,
                                                api_key,
                                                api_secret,
-                                               str(orden_filled_size))  # MARKET SELL
+                                               sizefunds=str(orden_filled_size),
+                                               price_bidask=precio_venta_limit)  # LIMIT SELL
+                        limit_order_id = ""
+                        order_filled = False
+                        ws_client = WSClient(api_key=api_key, api_secret=api_secret, on_message=on_message,
+                                             verbose=True)
+                        ws_client.open()
+                        ws_client.subscribe([param.CRYPTO], ["heartbeats", "user"])
+                        while not order_filled:
+                            ws_client.sleep_with_exception_check(1)
+                        print(f"order {limit_order_id} filled!")
+                        ws_client.close()
                         time.sleep(5)
                         id_venta = orden_venta[cons.RESPONSE][cons.ORDER_ID]
                         id_venta_user = orden_venta[cons.RESPONSE][cons.CLIENT_ORDER_ID]

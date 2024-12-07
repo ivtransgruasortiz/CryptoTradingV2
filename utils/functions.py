@@ -687,3 +687,15 @@ def bool_compras_previas(tramo_actual, records):
     else:
         boolbuy = True
     return boolbuy
+
+
+def on_message(msg):
+    global order_filled
+    global limit_order_id
+    message_data = json.loads(msg)
+    if 'channel' in message_data and message_data['channel'] == 'user':
+        orders = message_data['events'][0]['orders']
+        for order in orders:
+            order_id = order['order_id']
+            if order_id == limit_order_id and order['status'] == 'FILLED':
+                order_filled = True
