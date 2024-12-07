@@ -484,7 +484,11 @@ if __name__ == "__main__":
                         crypto_log.info(e)
                         pass
 
-            # LOGGING CONDICIONES COMPRA-VENTA
+            # LOGGING CONDICIONES COMPRA-VENTA Y PAUSAS INFO-GENERAL
+            # CALCULO PAUSAS
+            contador_ciclos += 1  # para poder comparar hacia atrśs freq*time_required = num_ciclos hacia atras
+            time.sleep(tiempo_pausa_new(time.perf_counter() - t0, param.FREQ_EXEC))
+            # print(contador_ciclos)
             if contador_ciclos % param.TIME_CONDICIONES_COMPRAVENTA_LOGS == 0:
                 crypto_log.info(tramo_actual)
                 crypto_log.info(dicc_cond_compraventa)
@@ -492,10 +496,6 @@ if __name__ == "__main__":
                 for item in range(len(lista_last_buy_bbdd)):
                     crypto_log.info(f"condiciones_venta_total = {condiciones_venta_list[item]}")
 
-            # CALCULO PAUSAS
-            contador_ciclos += 1  # para poder comparar hacia atrśs freq*time_required = num_ciclos hacia atras
-            time.sleep(tiempo_pausa_new(time.perf_counter() - t0, param.FREQ_EXEC))
-            # print(contador_ciclos)
             if contador_ciclos % param.TIME_PAUSAS_LOGS == 0:
                 crypto_log.info(f'Numero de ciclos: {contador_ciclos}')
                 crypto_log.info(f'Precio compra bidask: {precio_compra_bidask} eur.')
