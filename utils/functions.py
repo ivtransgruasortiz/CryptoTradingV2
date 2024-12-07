@@ -392,14 +392,16 @@ def condiciones_buy_sell(precio_compra_bidask, precio_venta_bidask, porcentaje_c
     return [condicion, precio, dicc_condiciones]
 
 
-def buy_sell(compra_venta, crypto, tipo, api_key, api_secret, sizefunds=None, price_bidask=None, cancel=False,
-             seg_cancel=None):
+def buy_sell(compra_venta, crypto, tipo, api_key, api_secret, n_decim_price, n_decim_size, sizefunds=None,
+             price_bidask=None, cancel=False, seg_cancel=None):
     """
         :param compra_venta: 'buy' or 'sell'
         :param crypto: El producto de que se trate
         :param tipo: market or limit, por defecto, limit (market es para no especificar precio)
         :param api_key: api_key
         :param api_secret: api_secret
+        :param n_decim_price: n decimals for price order
+        :param n_decim_size: n decimals for size order
         :param sizefunds: tamaño orden
         :param price_bidask: precio al que se quiere comprar
         :param cancel: true or false for canceling fake orders
@@ -412,22 +414,23 @@ def buy_sell(compra_venta, crypto, tipo, api_key, api_secret, sizefunds=None, pr
         if (compra_venta == cons.BUY) & (tipo == cons.MARKET):
             order = client.market_order_buy(client_order_id=client_order_id,
                                             product_id=crypto,
-                                            quote_size=sizefunds)
+                                            quote_size=str(sizefunds))
         elif (compra_venta == cons.BUY) & (tipo == cons.LIMIT):
+            base_size = math.trunc((sizefunds / price_bidask) * 10**n_decim_size) / 10**n_decim_size
             order = client.limit_order_gtc_buy(client_order_id=client_order_id,
                                                product_id=crypto,
-                                               quote_size=sizefunds,
-                                               limit_price=price_bidask,
+                                               base_size=str(base_size),
+                                               limit_price=str(price_bidask),
                                                post_only=True)
         elif (compra_venta == cons.SELL) & (tipo == cons.MARKET):
             order = client.market_order_sell(client_order_id=client_order_id,
                                              product_id=crypto,
-                                             base_size=sizefunds)
+                                             base_size=str(sizefunds))
         elif (compra_venta == cons.SELL) & (tipo == cons.LIMIT):
             order = client.limit_order_gtc_sell(client_order_id=client_order_id,
                                                 product_id=crypto,
-                                                base_size=sizefunds,
-                                                limit_price=price_bidask,
+                                                base_size=str(sizefunds),
+                                                limit_price=str(price_bidask),
                                                 post_only=True)
         else:
             order = []

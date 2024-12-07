@@ -48,6 +48,7 @@ FILLS = "fills"
 PORCENTAJE_CAIDA_MIN = "porcentaje_caida_min"
 TIEMPO_CAIDA_MIN = "tiempo_caida_min"
 ORDER = "order"
+STATUS = "status"
 FILLED_SIZE = "filled_size"
 AVERAGE_FILLED_PRICE = "average_filled_price"
 TOTAL_FEES = "total_fees"
@@ -68,6 +69,8 @@ PORCENTAJE_CAIDA_1 = "porcentaje_caida_1"
 PORCENTAJE_CAIDA_2 = "porcentaje_caida_2"
 TIEMPO_CAIDA_1 = "tiempo_caida_1"
 TIEMPO_CAIDA_2 = "tiempo_caida_2"
+FILLED = "FILLED"
+SUCCESS = "success"
 
 
 MAX_DICC = {BTC_EUR: 95000,
