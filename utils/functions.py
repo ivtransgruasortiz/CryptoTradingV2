@@ -285,7 +285,7 @@ def tiempo_pausa_new(exec_time, freq):
     if pausa < 0:
         pausa = 0
         print("Delayed execution, consider lowering the fixed execution frequency.")
-        print(f"fixed_freq = {freq} vs realtime_freq = {round(1 / exec_time, 2)}")
+        print(f"fixed_freq = {freq} vs realtime_freq = {round(1 / exec_time, 2)} --- PAUSA_FORZADA = {pausa} seg.")
     return pausa
 
 

@@ -25,7 +25,7 @@ PMIN = 20  # percentil inferior seguridad - ideal 20
 MARGENMAX = 0.15  # Margen limite alrededor del maximo historico para operar con seguridad - ideal 0.1
 
 T_HOURS_BACK = 6
-FREQ_EXEC = 0.3  # frecuencia máxima de ejecución por ciclo Hz - ideal 0.5
+FREQ_EXEC = 0.5  # frecuencia máxima de ejecución por ciclo Hz - ideal 0.5
 CONTADOR_CICLOS = 0  # contador de ciclos
 FACTOR_TAMANIO = 100  # factor por el que multiplicar el numero de ciclos para limitar tamanio listas
 
