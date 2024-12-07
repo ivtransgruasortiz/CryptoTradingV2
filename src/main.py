@@ -202,6 +202,7 @@ if __name__ == "__main__":
 
     time.sleep(5)
     t00 = time.perf_counter()
+    t_ciclo_medio_list = []
 
     while True:
         try:
@@ -253,6 +254,7 @@ if __name__ == "__main__":
             medias_exp_lenta_bids = limite_tamanio(tamanio_listas_min, param.FACTOR_TAMANIO, medias_exp_lenta_bids)
             medias_exp_rapida_asks = limite_tamanio(tamanio_listas_min, param.FACTOR_TAMANIO, medias_exp_rapida_asks)
             medias_exp_lenta_asks = limite_tamanio(tamanio_listas_min, param.FACTOR_TAMANIO, medias_exp_lenta_asks)
+            t_ciclo_medio_list = limite_tamanio(tamanio_listas_min, param.FACTOR_TAMANIO, t_ciclo_medio_list)
 
             # FONDOS_DISPONIBLES
             disp_ini_sdk = get_accounts_sdk(api_key, api_secret)
@@ -488,8 +490,13 @@ if __name__ == "__main__":
             # CALCULO PAUSAS
             contador_ciclos += 1  # para poder comparar hacia atrśs freq*time_required = num_ciclos hacia atras
             time.sleep(tiempo_pausa_new(time.perf_counter() - t0, param.FREQ_EXEC))
+            t_ciclo = round(time.perf_counter() - t0, 2)
+            t_ciclo_medio_list.append(t_ciclo)
+            t_ciclo_medio = np.mean(t_ciclo_medio_list)
             # print(contador_ciclos)
             if contador_ciclos % param.TIME_CONDICIONES_COMPRAVENTA_LOGS == 0:
+                crypto_log.info(f"El tiempo transcurrido por ciclo es: {t_ciclo} seg.")
+                crypto_log.info(f"El tiempo medio transcurrido por ciclo es: {t_ciclo_medio} seg.")
                 crypto_log.info(tramo_actual)
                 crypto_log.info(dicc_cond_compraventa)
                 crypto_log.info(f"condiciones_compra_total = {condiciones_compra_total}")
