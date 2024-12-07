@@ -338,6 +338,7 @@ if __name__ == "__main__":
 
             # ORDEN DE COMPRA
             if condiciones_compra_total:
+                crypto_log.info("buy-order sent!!!")
                 try:
                     # orden_compra = buy_sell(cons.BUY,
                     #                         param.CRYPTO,
@@ -408,6 +409,7 @@ if __name__ == "__main__":
             lista_last_buy_tramo = []
             if not lista_last_buy_bbdd:
                 trigger = True
+            condiciones_venta_list = []
             for compra in lista_last_buy_bbdd:
                 try:
                     trigger = False
@@ -432,16 +434,10 @@ if __name__ == "__main__":
                                          medias_exp_rapida_bids, medias_exp_lenta_bids,
                                          medias_exp_rapida_asks, medias_exp_lenta_asks,
                                          porcentaje_inst_tiempo)
-
-                # LOGGING CONDICIONES COMPRA-VENTA
-                if contador_ciclos % 120 == 0:
-                    crypto_log.info(tramo_actual)
-                    crypto_log.info(dicc_cond_compraventa)
-                    crypto_log.info(f"condiciones_compra_total = {condiciones_compra_total}")
-                    crypto_log.info(f"condiciones_venta_total = {condiciones_venta[0]}")
-
+                condiciones_venta_list.append(condiciones_venta)
+                # ORDEN DE VENTA
                 if condiciones_venta[0]:
-                    # ORDEN DE VENTA
+                    crypto_log.info("sell-order sent!!!")
                     try:
                         # orden_venta = buy_sell(cons.SELL,
                         #                        param.CRYPTO,
@@ -488,11 +484,19 @@ if __name__ == "__main__":
                         crypto_log.info(e)
                         pass
 
+            # LOGGING CONDICIONES COMPRA-VENTA
+            if contador_ciclos % param.TIME_CONDICIONES_COMPRAVENTA_LOGS == 0:
+                crypto_log.info(tramo_actual)
+                crypto_log.info(dicc_cond_compraventa)
+                crypto_log.info(f"condiciones_compra_total = {condiciones_compra_total}")
+                for item in range(len(lista_last_buy_bbdd)):
+                    crypto_log.info(f"condiciones_venta_total = {condiciones_venta_list[item]}")
+
             # CALCULO PAUSAS
             contador_ciclos += 1  # para poder comparar hacia atrśs freq*time_required = num_ciclos hacia atras
             time.sleep(tiempo_pausa_new(time.perf_counter() - t0, param.FREQ_EXEC))
             # print(contador_ciclos)
-            if contador_ciclos % 300 == 0:
+            if contador_ciclos % param.TIME_PAUSAS_LOGS == 0:
                 crypto_log.info(f'Numero de ciclos: {contador_ciclos}')
                 crypto_log.info(f'Precio compra bidask: {precio_compra_bidask} eur.')
                 crypto_log.info(f'Precio venta bidask: {precio_venta_bidask} eur.')
