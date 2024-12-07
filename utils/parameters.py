@@ -16,7 +16,7 @@ CRYPTO = ETH_EUR  # producto
 
 MARKET = True
 GRAFICA = False  # true para que pinte grafica, false para que no la pinte
-INVERSION_FIJA_EUR = 1  # cantidad en eur maximo por operación
+INVERSION_FIJA_EUR = 200  # cantidad en eur maximo por operación
 N_TRAMOS = 4  # Tramos percentiles
 
 T_LIMIT_PERCENTILE = 28800  # tiempo hacia atrás en segundos para calcular los percentiles
