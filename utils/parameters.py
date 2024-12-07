@@ -14,7 +14,7 @@ XTZ_EUR = "XTZ-EUR"
 
 CRYPTO = ETH_EUR  # producto
 
-MARKET = True
+MARKET = False
 GRAFICA = False  # true para que pinte grafica, false para que no la pinte
 INVERSION_FIJA_EUR = 200  # cantidad en eur maximo por operación
 N_TRAMOS = 4  # Tramos percentiles
