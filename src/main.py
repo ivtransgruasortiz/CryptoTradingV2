@@ -359,7 +359,7 @@ if __name__ == "__main__":
                     ws_client.subscribe([param.CRYPTO], ["heartbeats", "user"])
                     while not order_filled:
                         ws_client.sleep_with_exception_check(1)
-                    print(f"order {limit_order_id} filled!")
+                    crypto_log.info(f"order buy {limit_order_id} filled!")
                     ws_client.close()
                     time.sleep(5)
                     id_compra = orden_compra[cons.RESPONSE][cons.ORDER_ID]
@@ -373,6 +373,7 @@ if __name__ == "__main__":
                     orden_fees = math.trunc(float(orden_detail[cons.ORDER][cons.TOTAL_FEES])
                                             * 10 ** n_decim_price) / 10 ** n_decim_price
                     lista_last_buy.append(orden_filled_price)
+                    crypto_log.info(orden_compra)
                     trigger = False
                     # BBDDs
                     records_ultima_compra.insert({cons.ID_COMPRA_BBDD: id_compra,
@@ -384,6 +385,7 @@ if __name__ == "__main__":
                                                   cons.PORCENTAJE_BENEFICIO: porcentaje_beneficio,
                                                   cons.FECHA: datetime.datetime.now().isoformat(),
                                                   cons.TRAMO: tramo_actual[0]})
+                    crypto_log.info(records_ultima_compra.all())
                     all_trades_records.insert(orden_compra)
                 except Exception as e:
                     crypto_log.info(e)
@@ -430,6 +432,14 @@ if __name__ == "__main__":
                                          medias_exp_rapida_bids, medias_exp_lenta_bids,
                                          medias_exp_rapida_asks, medias_exp_lenta_asks,
                                          porcentaje_inst_tiempo)
+
+                # LOGGING CONDICIONES COMPRA-VENTA
+                if contador_ciclos % 120 == 0:
+                    crypto_log.info(tramo_actual)
+                    crypto_log.info(dicc_cond_compraventa)
+                    crypto_log.info(f"condiciones_compra_total = {condiciones_compra_total}")
+                    crypto_log.info(f"condiciones_venta_total = {condiciones_venta[0]}")
+
                 if condiciones_venta[0]:
                     # ORDEN DE VENTA
                     try:
@@ -454,7 +464,7 @@ if __name__ == "__main__":
                         ws_client.subscribe([param.CRYPTO], ["heartbeats", "user"])
                         while not order_filled:
                             ws_client.sleep_with_exception_check(1)
-                        print(f"order {limit_order_id} filled!")
+                        crypto_log.info(f"order sell {limit_order_id} filled!")
                         ws_client.close()
                         time.sleep(5)
                         id_venta = orden_venta[cons.RESPONSE][cons.ORDER_ID]
@@ -468,6 +478,7 @@ if __name__ == "__main__":
                         orden_fees = math.trunc(float(orden_detail[cons.ORDER][cons.TOTAL_FEES])
                                                 * 10 ** n_decim_price) / 10 ** n_decim_price
                         lista_last_sell.append(orden_filled_price)
+                        crypto_log.info(orden_venta)
                         trigger = True
 
                         # BBDD
@@ -480,8 +491,8 @@ if __name__ == "__main__":
             # CALCULO PAUSAS
             contador_ciclos += 1  # para poder comparar hacia atrśs freq*time_required = num_ciclos hacia atras
             time.sleep(tiempo_pausa_new(time.perf_counter() - t0, param.FREQ_EXEC))
-            print(contador_ciclos)
-            if contador_ciclos % 60 == 0:
+            # print(contador_ciclos)
+            if contador_ciclos % 300 == 0:
                 crypto_log.info(f'Numero de ciclos: {contador_ciclos}')
                 crypto_log.info(f'Precio compra bidask: {precio_compra_bidask} eur.')
                 crypto_log.info(f'Precio venta bidask: {precio_venta_bidask} eur.')
@@ -489,7 +500,11 @@ if __name__ == "__main__":
                 crypto_log.info(f'plow: {str(round(plow, 5))} eur.')
                 crypto_log.info(f'Dif_inst_max: {str(round(porcentaje_inst_tiempo * 100, 2))} %')
         except (KeyboardInterrupt, SystemExit):  # ctrl + c
-            crypto_log.info('All done')
+            crypto_log.info('\n'
+                            '############'
+                            '\nAll done\n'
+                            '############'
+                            '\n')
             break
 # FIN
 # TODO - to be continued...
