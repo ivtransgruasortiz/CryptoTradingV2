@@ -173,6 +173,11 @@ if __name__ == "__main__":
     records_ultima_compra = cryptodb.table(cons.ULTIMA_COMPRA_RECORDS)
     all_trades_records = cryptodb.table(cons.ALL_TRADES_RECORDS)
 
+    # # TO DELETE ALL DATA FROM DDBBs
+    # lista_maximos_records.truncate()
+    # records_ultima_compra.truncate()
+    # all_trades_records.truncate()
+
     if lista_maximos_records.all() == []:
         for crypto in cons.MAX_DICC.keys():
             lista_maximos_records.upsert({cons.CRYPTO: crypto,
