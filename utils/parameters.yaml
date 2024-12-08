@@ -4,7 +4,7 @@ whatsapp_twilio_db: 'whatsapp_twilio_db'
 mail_db: 'mail_db'
 twitter_db: 'twitter_db'
 
-grafica: False # true para que pinte grafica, false para que no la pinte
+grafica: True # true para que pinte grafica, false para que no la pinte
 nummax: 9999999 # Inicializacion listas
 stoplossmarker: False # Para activar el stoploss poner a True (le entra a la funcion stoploss para activarla)
 stoptrigger: False  # Para marcar si estamos en situación de stoploss y poder cambiar condiciones de compra y venta
@@ -16,9 +16,11 @@ inversion_fija_eur: 2000 # cantidad en eur maximo por operación
 #crypto: "LTC-EUR" # producto
 #crypto: "ADA-EUR" # producto
 #crypto: "DOGE-EUR" # producto
-crypto: "XTZ-EUR" # producto
+#crypto: "XTZ-EUR" # producto
+crypto: "BTC-EUR" # producto
 
-api_url: 'https://api.pro.coinbase.com/' # url de la api
+#api_url: 'https://api.pro.coinbase.com/' # url de la api
+api_url: 'https://api.coinbase.com/api/v3/brokerage/'
 
 t_limit_percentile: 28800 # tiempo hacia atrás en segundos para calcular los percentiles
 pmax: 50 # percentil superior seguridad - ideal 50
