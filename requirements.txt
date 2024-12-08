@@ -16,6 +16,7 @@ tqdm==4.67.0
 matplotlib == 3.7.0
 tweepy==4.14.0
 coinbase-advanced-py
+coinbase
 tinydb
 
 PyJWT
