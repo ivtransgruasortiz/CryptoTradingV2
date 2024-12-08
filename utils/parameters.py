@@ -1,5 +1,6 @@
 # PARAMETERS
 
+INVERSION_FIJA_EUR = 200  # cantidad en eur maximo por operación
 DELETE_LOGS = False
 TIME_PAUSAS_LOGS = 300
 TIME_CONDICIONES_COMPRAVENTA_LOGS = 120
@@ -18,7 +19,6 @@ CRYPTO = ETH_EUR  # producto
 
 MARKET = False
 GRAFICA = False  # true para que pinte grafica, false para que no la pinte
-INVERSION_FIJA_EUR = 200  # cantidad en eur maximo por operación
 N_TRAMOS = 4  # Tramos percentiles
 
 T_LIMIT_PERCENTILE = 28800  # tiempo hacia atrás en segundos para calcular los percentiles
