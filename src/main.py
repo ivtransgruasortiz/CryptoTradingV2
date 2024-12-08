@@ -363,36 +363,46 @@ if __name__ == "__main__":
                                             sizefunds=param.INVERSION_FIJA_EUR,
                                             price_bidask=precio_compra_limit)  # LIMIT BUY
                     if orden_compra[cons.SUCCESS]:
+                        id_compra = orden_compra[cons.RESPONSE][cons.ORDER_ID]
+                        id_compra_user = orden_compra[cons.RESPONSE][cons.CLIENT_ORDER_ID]
                         order_filled = False
+                        tb0 = time.perf_counter()
                         while not order_filled:
+                            tb1 = time.perf_counter() - tb0
+                            if tb1 > param.T_COMPRA_LIMIT:
+                                client = RESTClient(api_key=api_key, api_secret=api_secret)
+                                orden_buy_cancel = client.cancel_orders(order_ids=[id_compra])
+                                break
                             time.sleep(1)
-                            id_compra = orden_compra[cons.RESPONSE][cons.ORDER_ID]
-                            id_compra_user = orden_compra[cons.RESPONSE][cons.CLIENT_ORDER_ID]
                             client = RESTClient(api_key=api_key, api_secret=api_secret)
                             orden_detail = client.get_order(order_id=id_compra)
                             order_filled = orden_detail[cons.ORDER][cons.STATUS] == cons.FILLED
-                        crypto_log.info(f"order buy {id_compra} filled!")
-                        orden_filled_size = math.trunc(float(orden_detail[cons.ORDER][cons.FILLED_SIZE])
-                                                       * 10 ** n_decim_size) / 10 ** n_decim_size
-                        orden_filled_price = math.trunc(float(orden_detail[cons.ORDER][cons.AVERAGE_FILLED_PRICE])
-                                                        * 10 ** n_decim_price) / 10 ** n_decim_price
-                        orden_fees = math.trunc(float(orden_detail[cons.ORDER][cons.TOTAL_FEES])
-                                                * 10 ** n_decim_price) / 10 ** n_decim_price
-                        lista_last_buy.append(orden_filled_price)
-                        crypto_log.info(orden_compra)
-                        trigger = False
-                        # BBDDs
-                        records_ultima_compra.insert({cons.ID_COMPRA_BBDD: id_compra,
-                                                      cons.ID_COMPRA_USER_BBDD: id_compra_user,
-                                                      cons.ORDEN_FILLED_SIZE: orden_filled_size,
-                                                      cons.ORDEN_FILLED_PRICE: orden_filled_price,
-                                                      cons.FEES_EUR_COMPRA: orden_fees,
-                                                      cons.FEES_CLIENT: fees_client,
-                                                      cons.PORCENTAJE_BENEFICIO: porcentaje_beneficio,
-                                                      cons.FECHA: datetime.datetime.now().isoformat(),
-                                                      cons.TRAMO: tramo_actual[0]})
-                        crypto_log.info(records_ultima_compra.all())
-                        all_trades_records.insert(orden_compra[cons.RESPONSE])
+                        if order_filled:
+                            crypto_log.info(f"order buy {id_compra} filled!")
+                            orden_filled_size = math.trunc(float(orden_detail[cons.ORDER][cons.FILLED_SIZE])
+                                                           * 10 ** n_decim_size) / 10 ** n_decim_size
+                            orden_filled_price = math.trunc(float(orden_detail[cons.ORDER][cons.AVERAGE_FILLED_PRICE])
+                                                            * 10 ** n_decim_price) / 10 ** n_decim_price
+                            orden_fees = math.trunc(float(orden_detail[cons.ORDER][cons.TOTAL_FEES])
+                                                    * 10 ** n_decim_price) / 10 ** n_decim_price
+                            lista_last_buy.append(orden_filled_price)
+                            crypto_log.info(orden_compra)
+                            trigger = False
+                            # BBDDs
+                            records_ultima_compra.insert({cons.ID_COMPRA_BBDD: id_compra,
+                                                          cons.ID_COMPRA_USER_BBDD: id_compra_user,
+                                                          cons.ORDEN_FILLED_SIZE: orden_filled_size,
+                                                          cons.ORDEN_FILLED_PRICE: orden_filled_price,
+                                                          cons.FEES_EUR_COMPRA: orden_fees,
+                                                          cons.FEES_CLIENT: fees_client,
+                                                          cons.PORCENTAJE_BENEFICIO: porcentaje_beneficio,
+                                                          cons.FECHA: datetime.datetime.now().isoformat(),
+                                                          cons.TRAMO: tramo_actual[0]})
+                            crypto_log.info(records_ultima_compra.all())
+                            all_trades_records.insert(orden_compra[cons.RESPONSE])
+                        else:
+                            crypto_log.info(f"The order with OrderID: {id_compra} was canceled by "
+                                            f"overtime of {param.T_COMPRA_LIMIT} seconds.")
                 except Exception as e:
                     crypto_log.info(e)
                     pass
@@ -462,27 +472,37 @@ if __name__ == "__main__":
                                                sizefunds=orden_filled_size,
                                                price_bidask=precio_venta_limit)  # LIMIT SELL
                         if orden_venta[cons.SUCCESS]:
+                            id_venta = orden_venta[cons.RESPONSE][cons.ORDER_ID]
+                            id_venta_user = orden_compra[cons.RESPONSE][cons.CLIENT_ORDER_ID]
                             order_filled = False
+                            ts0 = time.perf_counter()
                             while not order_filled:
+                                ts1 = time.perf_counter() - ts0
+                                if ts1 > param.T_VENTA_LIMIT:
+                                    client = RESTClient(api_key=api_key, api_secret=api_secret)
+                                    orden_sell_cancel = client.cancel_orders(order_ids=[id_venta])
+                                    break
                                 time.sleep(1)
-                                id_venta = orden_venta[cons.RESPONSE][cons.ORDER_ID]
-                                id_venta_user = orden_compra[cons.RESPONSE][cons.CLIENT_ORDER_ID]
                                 client = RESTClient(api_key=api_key, api_secret=api_secret)
                                 orden_detail = client.get_order(order_id=id_venta)
                                 order_filled = orden_detail[cons.ORDER][cons.STATUS] == cons.FILLED
-                            crypto_log.info(f"order sell {id_venta} filled!")
-                            orden_filled_size = math.trunc(float(orden_detail[cons.ORDER][cons.FILLED_SIZE])
-                                                           * 10 ** n_decim_size) / 10 ** n_decim_size
-                            orden_filled_price = math.trunc(float(orden_detail[cons.ORDER][cons.AVERAGE_FILLED_PRICE])
-                                                            * 10 ** n_decim_price) / 10 ** n_decim_price
-                            orden_fees = math.trunc(float(orden_detail[cons.ORDER][cons.TOTAL_FEES])
-                                                    * 10 ** n_decim_price) / 10 ** n_decim_price
-                            lista_last_sell.append(orden_filled_price)
-                            crypto_log.info(orden_venta)
-                            trigger = True
-                            # BBDD
-                            records_ultima_compra.remove(where(cons.ID_COMPRA_BBDD) == id_compra_bbdd)
-                            all_trades_records.insert(orden_venta[cons.RESPONSE])
+                            if order_filled:
+                                crypto_log.info(f"order sell {id_venta} filled!")
+                                orden_filled_size = math.trunc(float(orden_detail[cons.ORDER][cons.FILLED_SIZE])
+                                                               * 10 ** n_decim_size) / 10 ** n_decim_size
+                                orden_filled_price = math.trunc(float(orden_detail[cons.ORDER][cons.AVERAGE_FILLED_PRICE])
+                                                                * 10 ** n_decim_price) / 10 ** n_decim_price
+                                orden_fees = math.trunc(float(orden_detail[cons.ORDER][cons.TOTAL_FEES])
+                                                        * 10 ** n_decim_price) / 10 ** n_decim_price
+                                lista_last_sell.append(orden_filled_price)
+                                crypto_log.info(orden_venta)
+                                trigger = True
+                                # BBDD
+                                records_ultima_compra.remove(where(cons.ID_COMPRA_BBDD) == id_compra_bbdd)
+                                all_trades_records.insert(orden_venta[cons.RESPONSE])
+                            else:
+                                crypto_log.info(f"The order with OrderID: {id_venta} was canceled by "
+                                                f"overtime of {param.T_VENTA_LIMIT} seconds.")
                     except Exception as e:
                         crypto_log.info(e)
                         pass

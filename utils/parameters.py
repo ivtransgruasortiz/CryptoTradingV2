@@ -3,6 +3,8 @@
 DELETE_LOGS = False
 TIME_PAUSAS_LOGS = 300
 TIME_CONDICIONES_COMPRAVENTA_LOGS = 120
+T_COMPRA_LIMIT = 10  # seconds
+T_VENTA_LIMIT = 10  # seconds
 
 API_URL = 'https =//api.coinbase.com/api/v3/brokerage/'
 
