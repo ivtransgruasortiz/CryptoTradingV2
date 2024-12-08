@@ -1,52 +1,278 @@
-import pandas as pd
-import time
 import datetime
 import json
-import matplotlib.pyplot as plt
-import requests as rq
-import hmac, hashlib, base64
-from requests.auth import AuthBase
-from scipy import stats
-import tqdm
-import dateutil.parser
-from dateutil import tz
-from statistics import mean
-import math
+import logging
+import random
+import secrets
 import smtplib
-from smtplib import SMTPException
+import time
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from dateutil.tz import *
 from string import ascii_lowercase
+
+import dateutil.parser
+import jwt
+import math
+import matplotlib as mpl
+import matplotlib.pyplot as plt
 import numpy as np
-import random
+import pandas as pd
+import requests as rq
+import tqdm
+from coinbase.rest import RESTClient
+from cryptography.fernet import Fernet
+from cryptography.hazmat.primitives import serialization
+from dateutil import tz
+from dateutil.tz import *
+from scipy import stats
+from tinydb import TinyDB, where
+
+import utils.constants as cons
+import utils.parameters as param
 
 
-# # AUTHENTICATION INTO COINBASE
+def encrypt(message: bytes, key: bytes) -> bytes:
+    return Fernet(key).encrypt(message)
 
-class CoinbaseExchangeAuth(AuthBase):
 
-    def __init__(self, api_key, secret_key, passphrase):
+def decrypt(token: bytes, key: bytes) -> bytes:
+    return Fernet(key).decrypt(token)
+
+
+def build_jwt(key_name, key_secret, uri):
+    private_key_bytes = key_secret.encode('utf-8')
+    private_key = serialization.load_pem_private_key(private_key_bytes, password=None)
+    jwt_payload = {
+        'sub': key_name,
+        'iss': "cdp",
+        'nbf': int(time.time()),
+        'exp': int(time.time()) + 120,
+        'uri': uri,
+    }
+    jwt_token = jwt.encode(
+        jwt_payload,
+        private_key,
+        algorithm='ES256',
+        headers={'kid': key_name, 'nonce': secrets.token_hex()},
+    )
+    return jwt_token
+
+
+class RestApi:
+    def __init__(self, api_key, api_secret, request_method, endpoint, **kwargs):
         self.api_key = api_key
-        self.secret_key = secret_key
-        self.passphrase = passphrase
+        self.api_secret = api_secret
+        self.request_method = request_method
+        self.endpoint = endpoint
+        self.https = cons.HTTPS
+        self.host = cons.REQUEST_HOST
+        self.uri = f"{self.request_method} {self.host}{self.endpoint}"
+        self.jwt_token = build_jwt(self.api_key, self.api_secret, self.uri)
+        self.headers = {
+            'Content-Type': 'application/json',
+            "Authorization": f"Bearer {self.jwt_token}"
+        }
+        self.params = kwargs
+        self.endpoint_path = self.https + self.host + self.endpoint
+        print(self.jwt_token)
+        print(self.endpoint_path)
 
-    def __call__(self, request):
-        timestamp = str(time.time())
-        # timestamp = datetime.datetime.now().isoformat()
-        message = timestamp + str(request.method).upper() + request.path_url + str(request.body or '')
-        hmac_key = base64.b64decode(self.secret_key)
-        # # signature = hmac.new(hmac_key, message, hashlib.sha256)
-        signature = hmac.new(hmac_key, message.encode(), hashlib.sha256)
-        # signature_b64 = signature.digest().encode('base64').rstrip('\n')
-        signature_b64 = base64.b64encode(signature.digest()).decode()
-        request.headers.update({
-            'CB-ACCESS-SIGN': signature_b64,
-            'CB-ACCESS-TIMESTAMP': timestamp,
-            'CB-ACCESS-KEY': self.api_key,
-            'CB-ACCESS-PASSPHRASE': self.passphrase,
-            'Content-Type': 'application/json'})
-        return request
+    def rest(self):
+        if self.request_method.upper() == cons.GET:
+            res = rq.get(self.endpoint_path, params=self.params, headers=self.headers)
+        elif self.request_method.upper() == cons.POST:
+            res = rq.post(self.endpoint_path, params=self.params, headers=self.headers)
+        if res.status_code == 200:
+            # Procesamos los datos en formato JSON (si la API devuelve JSON)
+            data = res.json()
+            logging.info("all ok")
+        else:
+            # En caso de error, mostramos el código de estado
+            data = None
+            print(f"Error: {res.status_code}, {res.text}")
+            logging.info(f"Error: {res.status_code}, {res.text}")
+        return data
+
+
+class Headers:
+    def __init__(self, api_key, api_secret):
+        self.api_key = api_key
+        self.api_secret = api_secret
+
+    def headers(self, request_method, endpoint):
+        uri = f"{request_method} {cons.REQUEST_HOST}{endpoint}"
+        jwt_token = build_jwt(self.api_key, self.api_secret, uri)
+        headers = {
+            'Content-Type': 'application/json',
+            "Authorization": f"Bearer {jwt_token}"
+        }
+        return headers
+
+    @staticmethod
+    def query_params(**kwargs):
+        queryparams = "&".join([f"{x}={y}" for x, y in zip(kwargs.keys(), kwargs.values())])
+        return queryparams
+
+
+def get_accounts(api_key, api_secret):
+    is_continue = True
+    account = []
+    header_ks = Headers(api_key, api_secret)
+    endpoint = "/api/v3/brokerage/accounts"
+    cursor = ""
+    limit = 250
+    disp_ini = {}
+    while is_continue:
+        try:
+            endpoint_path = cons.HTTPS + \
+                            cons.REQUEST_HOST + \
+                            "?".join([endpoint, header_ks.query_params(limit=limit, cursor=cursor)])
+            res = rq.get(endpoint_path, headers=header_ks.headers(cons.GET, endpoint))
+            account += res.json()["accounts"]
+            is_continue = res.json()["has_next"]
+            cursor = res.json()["cursor"]
+        except Exception as e:
+            logging.info(f"Error getting account details: {e}")
+            break
+    for item in account:
+        disp_ini.update({item['available_balance']['currency']: float(item['available_balance']['value'])})
+    return disp_ini
+
+
+def get_accounts_sdk(api_key, api_secret):
+    is_continue = True
+    account = []
+    cursor = ""
+    limit = 250
+    disp_ini = {}
+    while is_continue:
+        try:
+            client = RESTClient(api_key=api_key, api_secret=api_secret)
+            res = client.get_accounts(limit=limit, cursor=cursor)
+            account += res["accounts"]
+            is_continue = res["has_next"]
+            cursor = res["cursor"]
+        except Exception as e:
+            logging.info(f"Error getting account details: {e}")
+            break
+    for item in account:
+        disp_ini.update({item['available_balance']['currency']: float(item['available_balance']['value'])})
+    return disp_ini
+
+
+def historic_df_sdk(api_key, api_secret, crypto=cons.BTC_EUR, t_hours_back=3, limit=1000):
+    end_datetime = datetime.datetime.now()  # hacia atrás en el tiempo
+    end_timestamp = int(end_datetime.timestamp())
+    start_datetime = end_datetime - datetime.timedelta(hours=t_hours_back)
+    # start_timestamp = int(end_datetime.timestamp())
+    pbar = tqdm.tqdm(total=t_hours_back * 60)
+    trades_list_df = pd.DataFrame()
+    print('\n')
+    print("start_time:", start_datetime)
+    print("end_time:", end_datetime, '\n')
+    while end_datetime >= start_datetime:
+        pbar.update(10)
+        try:
+            client = RESTClient(api_key=api_key, api_secret=api_secret)
+            trades_list = client.get_market_trades(crypto, limit=limit, end=end_timestamp)['trades']
+            trades_list = [{"trade_id": x["trade_id"], "price": float(x['price']), "size": float(x['size']),
+                            "time": x["time"], "side": x["side"]} for x in trades_list]
+            trades_list_df = pd.concat([trades_list_df, pd.DataFrame(trades_list)]) \
+                .sort_values(['time', 'trade_id'], ascending=True) \
+                .drop_duplicates()
+            print(trades_list_df)
+            end_datetime = datetime.datetime.strptime(trades_list_df["time"].iloc[0],
+                                                      "%Y-%m-%dT%H:%M:%S.%fZ") + datetime.timedelta(hours=1)
+            end_timestamp = int(end_datetime.timestamp())
+        except Exception as e:
+            logging.info(f"Error getting historic trades details: {e}")
+            break
+    pbar.close()
+    return trades_list_df
+
+
+# def historic_df(crypto, api_url, auth, pag_historic):
+#     vect_hist = {}
+#     df_new = pd.DataFrame()
+#     print('### Gathering Data... ')
+#     r = rq.get(api_url + 'products/' + crypto + '/trades', auth=auth)
+#     enlace = r.headers['Cb-After']
+#     trades = [{'bids': [[float(x['price']), float(x['size']), 1]],
+#                'asks': [[float(x['price']), float(x['size']), 1]],
+#                'sequence': x['trade_id'],
+#                'time': x['time']} for x in r.json()]
+#     for i in tqdm.trange(pag_historic):
+#         r = rq.get(api_url + 'products/' + crypto + '/trades?after=%s' % enlace, auth=auth)
+#         time.sleep(0.3)
+#         enlace = r.headers['Cb-After']
+#         valores = r.json()
+#         # trades = trades + [float(x['price']) for x in r.json()]
+#         trades += [{'bids': [[float(x['price']), float(x['size']), 1]],
+#                     'asks': [[float(x['price']), float(x['size']), 1]],
+#                     'sequence': x['trade_id'],
+#                     'time': x['time'],
+#                     'side': x['side']} for x in r.json()]
+#     df_new = pd.DataFrame.from_dict(trades)
+#     hist_df = df_new.sort_values('time')
+#     return hist_df
+
+
+def sma(n, datos):
+    if len(datos) > n:
+        media = sum(datos[-n:]) / n
+        return round(media, 5)
+    else:
+        return round(datos[0], 5)
+
+
+def ema(n, datos, alpha, media_ant):
+    if len(datos) > n:
+        expmedia = datos[-1] * alpha + (1 - alpha) * media_ant[-1]
+        return round(expmedia, 5)
+    else:
+        return round(datos[0], 5)
+
+
+def medias_exp(bids_asks, n_rapida=60, n_lenta=360):
+    """
+    :param bids_asks: lista de valores sobre los que calcular las medias exponenciales
+    :param n_rapida: periodo de calculo media rapida-nerviosa
+    :param n_lenta: periodo de calculo media lenta-tendencia
+    :return: lista de listas de valores correspondientes a las medias rapida y lenta
+    """
+    mediavar_rapida = []
+    mediavar_lenta = []
+    expmediavar_rapida = []
+    expmediavar_lenta = []
+    for i in range(len(bids_asks)):
+        mediavar_rapida.append(sma(n_rapida, bids_asks[:i + 1]))
+        mediavar_lenta.append(sma(n_lenta, bids_asks[:i + 1]))
+        if len(expmediavar_rapida) <= n_rapida + 1:
+            expmediavar_rapida.append(mediavar_rapida[-1])
+        else:
+            expmediavar_rapida.append(ema(n_rapida, bids_asks[:i + 1], 2.0 / (n_rapida + 1), expmediavar_rapida))
+
+        if len(expmediavar_lenta) <= n_lenta + 1:
+            expmediavar_lenta.append(mediavar_lenta[-1])
+        else:
+            expmediavar_lenta.append(ema(n_lenta, bids_asks[:i + 1], 2.0 / (n_lenta + 1), expmediavar_lenta))
+    return [expmediavar_rapida, expmediavar_lenta]
+
+
+def df_medias_bids_asks(bids_asks, crypto, fechas, n_rapida=60, n_lenta=360):
+    """
+    :param bids_asks: lista para formar el dataframe
+    :param crypto: moneda
+    :param fechas: lista fechas
+    :param n_rapida: parametros medias para calculos medias exponenciales
+    :param n_lenta: parametros medias para calculos medias exponenciales
+    :return:
+    """
+    df_bids_asks = pd.DataFrame(fechas)
+    df_bids_asks['expmedia_rapida'] = medias_exp(bids_asks, n_rapida, n_lenta)[0]
+    df_bids_asks['expmedia_lenta'] = medias_exp(bids_asks, n_rapida, n_lenta)[1]
+    df_bids_asks[crypto] = bids_asks
+    df_bids_asks['time'] = fechas
+    return df_bids_asks
 
 
 def tiempo_pausa_new(exec_time, freq):
@@ -59,50 +285,44 @@ def tiempo_pausa_new(exec_time, freq):
     if pausa < 0:
         pausa = 0
         print("Delayed execution, consider lowering the fixed execution frequency.")
-        print(f"fixed_freq = {freq} vs realtime_freq = {round(1 / exec_time, 2)}")
+        print(f"fixed_freq = {freq} vs realtime_freq = {round(1 / exec_time, 2)} --- PAUSA_FORZADA = {pausa} seg.")
     return pausa
 
 
-def disposiciones_iniciales(api_url, auth):
+def disposiciones_iniciales(client):
     disp_ini = {}
     try:
-        account = rq.get(api_url + 'accounts', auth=auth)
-        account = account.json()
-        for item in account:
-            disp_ini.update({item['currency']: float(item['available'])})
+        account = client.get_accounts()
+        for item in account[cons.ACCOUNTS]:
+            disp_ini.update({item['currency']: float(item["available_balance"]["value"])})
     except:
         pass
     return disp_ini
 
 
-def percentil(dflista, time_percen_dicc, lecturabbddmax, pmax, pmin, margenmax, stoptrigger, t_limit_percentile):
+def percentil(dflista, time_percen_dicc, lecturabbddmax, pmax, pmin, margenmax, t_limit_percentile):
     phigh = stats.scoreatpercentile(sorted(dflista[-t_limit_percentile:]), pmax)
     plow = stats.scoreatpercentile(sorted(dflista[-t_limit_percentile:]), pmin)
-    if stoptrigger:
-        porcentaje_caida = [time_percen_dicc['porcentaje_caida_stop']]
-        tiempo_caida = [time_percen_dicc['tiempo_caida_stop']]
-        porcentaje_beneficio = [time_percen_dicc['porcentaje_beneficio_max']]
-        cond = zip(porcentaje_caida, tiempo_caida, porcentaje_beneficio)
-    elif (dflista[-1] >= phigh) | (abs(lecturabbddmax - dflista[-1]) <= margenmax * lecturabbddmax):
-        porcentaje_caida = [time_percen_dicc['porcentaje_caida_max']]
-        tiempo_caida = [time_percen_dicc['tiempo_caida_max']]
-        porcentaje_beneficio = [time_percen_dicc['porcentaje_beneficio_min']]
+    if (dflista[-1] >= phigh) | (abs(lecturabbddmax - dflista[-1]) <= margenmax * lecturabbddmax):
+        porcentaje_caida = [time_percen_dicc[cons.PORCENTAJE_CAIDA_MAX]]
+        tiempo_caida = [time_percen_dicc[cons.TIEMPO_CAIDA_MAX]]
+        porcentaje_beneficio = [time_percen_dicc[cons.PORCENTAJE_BENEFICIO_MIN]]
         cond = zip(porcentaje_caida, tiempo_caida, porcentaje_beneficio)
     elif (dflista[-1] > plow) & (dflista[-1] < phigh):
-        porcentaje_caida = [time_percen_dicc['porcentaje_caida_1'],
-                            time_percen_dicc['porcentaje_caida_2']
+        porcentaje_caida = [time_percen_dicc[cons.PORCENTAJE_CAIDA_1],
+                            time_percen_dicc[cons.PORCENTAJE_CAIDA_2]
                             ]
-        tiempo_caida = [time_percen_dicc['tiempo_caida_1'],
-                        time_percen_dicc['tiempo_caida_2']
+        tiempo_caida = [time_percen_dicc[cons.TIEMPO_CAIDA_1],
+                        time_percen_dicc[cons.TIEMPO_CAIDA_2]
                         ]
-        porcentaje_beneficio = [time_percen_dicc['porcentaje_beneficio_min'],
-                                time_percen_dicc['porcentaje_beneficio_min']
+        porcentaje_beneficio = [time_percen_dicc[cons.PORCENTAJE_BENEFICIO_MIN],
+                                time_percen_dicc[cons.PORCENTAJE_BENEFICIO_MIN]
                                 ]
         cond = zip(porcentaje_caida, tiempo_caida, porcentaje_beneficio)
     else:
-        porcentaje_caida = [time_percen_dicc['porcentaje_caida_min']]
-        tiempo_caida = [time_percen_dicc['tiempo_caida_min']]
-        porcentaje_beneficio = [time_percen_dicc['porcentaje_beneficio_max']]
+        porcentaje_caida = [time_percen_dicc[cons.PORCENTAJE_CAIDA_MIN]]
+        tiempo_caida = [time_percen_dicc[cons.TIEMPO_CAIDA_MIN]]
+        porcentaje_beneficio = [time_percen_dicc[cons.PORCENTAJE_BENEFICIO_MAX]]
         cond = zip(porcentaje_caida, tiempo_caida, porcentaje_beneficio)
     return [cond, phigh, plow]
 
@@ -133,155 +353,109 @@ def stoploss(lista_last_buy, precio_instantaneo, porcentaje_limite_stoploss, num
     return stop
 
 
-def condiciones_buy_sell(precio_compra_bidask, precio_venta_bidask, porcentaje_caida_1, porcentaje_beneficio_1,
+def condiciones_buy_sell(precio_compra_bidask, precio_venta_bidask, porcentaje_caida, porcentaje_beneficio,
                          tipo, trigger, last_buy, medias_exp_rapida_bids, medias_exp_lenta_bids,
-                         medias_exp_rapida_asks, medias_exp_lenta_asks, porcentaje_inst_tiempo):
+                         medias_exp_rapida_asks, medias_exp_lenta_asks, porcentaje_inst_tiempo,
+                         eur=0, inversion_fija_eur=param.INVERSION_FIJA_EUR):
     condicion_media_compra = medias_exp_rapida_asks[-1] > medias_exp_lenta_asks[-1]
     condicion_media_venta = medias_exp_rapida_bids[-1] < medias_exp_lenta_bids[-1]
-    if (tipo == 'buy') & trigger & condicion_media_compra & (porcentaje_inst_tiempo < -porcentaje_caida_1):
+    condicion_fondos_suficientes = eur >= inversion_fija_eur
+    condicion_porcentaje_caida = porcentaje_inst_tiempo < -porcentaje_caida
+    try:
+        condicion_venta_superior_margen_beneficio = \
+            precio_compra_bidask > last_buy[-1][cons.ORDEN_FILLED_PRICE] * (1 + porcentaje_beneficio)
+    except IndexError as e:
+        condicion_venta_superior_margen_beneficio = False
+    finally:
+        condicion_venta_superior_margen_beneficio = False
+        pass
+    if (tipo == cons.BUY) & condicion_fondos_suficientes & trigger & condicion_media_compra & \
+            condicion_porcentaje_caida:
         condicion = True
         precio = precio_venta_bidask
-        print('buy')
-    elif (tipo == 'sell') & (not trigger) & condicion_media_venta & \
-            (precio_compra_bidask > last_buy[-1] * (1 + porcentaje_beneficio_1)):
+        print(cons.BUY)
+    elif (tipo == cons.SELL) & (not trigger) & condicion_media_venta & condicion_venta_superior_margen_beneficio:
         condicion = True
         precio = precio_compra_bidask
-        print('sell')
+        print(cons.SELL)
     else:
         condicion = False
         precio = None
-    return [condicion, precio]
+    dicc_condiciones = {
+        "trigger": trigger,
+        "condicion_fondos_suficientes": condicion_fondos_suficientes,
+        "condicion_media_compra": condicion_media_compra,
+        "condicion_media_venta": condicion_media_venta,
+        "condicion_porcentaje_caida": condicion_porcentaje_caida,
+        "condicion_venta_superior_margen_beneficio": condicion_venta_superior_margen_beneficio
+    }
+    return [condicion, precio, dicc_condiciones]
 
 
-def buy_sell(compra_venta, crypto, tipo, api_url, auth, sizefunds=None, precio=None):
-    '''
+def buy_sell(compra_venta, crypto, tipo, api_key, api_secret, n_decim_price, n_decim_size, sizefunds=None,
+             price_bidask=None, cancel=False, seg_cancel=None):
+    """
         :param compra_venta: 'buy' or 'sell'
         :param crypto: El producto de que se trate
-        :param sum_conditions: True or False, trigger para el lanzamiento si se cumplen condiciones
-        :param size_order_bidask: tamaño orden
-        :param precio_venta_bidask: precio al que se quiere comprar
         :param tipo: market or limit, por defecto, limit (market es para no especificar precio)
-        :param api_url: url de conexion
-        :param auth: auth de conexion
+        :param api_key: api_key
+        :param api_secret: api_secret
+        :param n_decim_price: n decimals for price order
+        :param n_decim_size: n decimals for size order
+        :param sizefunds: tamaño orden
+        :param price_bidask: precio al que se quiere comprar
+        :param cancel: true or false for canceling fake orders
+        :param seg_cancel: seg for cancel fake order
         :return:
-    '''
-
-    if tipo == 'limit':
-        size_or_funds = 'size'
-    elif tipo == 'market':
-        size_or_funds = 'funds'
-    if compra_venta == 'buy':
-        order = {
-            'type': tipo,
-            size_or_funds: sizefunds,
-            "price": precio,
-            "side": compra_venta,
-            "product_id": crypto
-        }
-    elif compra_venta == 'sell':
-        size_or_funds = 'size'
-        order = {
-            'type': tipo,
-            size_or_funds: sizefunds,
-            "price": precio,
-            "side": compra_venta,
-            "product_id": crypto
-        }
+    """
+    client_order_id = random_name()
     try:
-        # r = rq.post(api_url + 'orders', json=order_buy, auth=auth) ##old
-        r = rq.post(api_url + 'orders', data=json.dumps(order), auth=auth)
-        ordenes = r.json()
-    except:
+        client = RESTClient(api_key=api_key, api_secret=api_secret)
+        if (compra_venta == cons.BUY) & (tipo == cons.MARKET):
+            order = client.market_order_buy(client_order_id=client_order_id,
+                                            product_id=crypto,
+                                            quote_size=str(sizefunds))
+        elif (compra_venta == cons.BUY) & (tipo == cons.LIMIT):
+            base_size = math.trunc((sizefunds / price_bidask) * 10**n_decim_size) / 10**n_decim_size
+            order = client.limit_order_gtc_buy(client_order_id=client_order_id,
+                                               product_id=crypto,
+                                               base_size=str(base_size),
+                                               limit_price=str(price_bidask),
+                                               post_only=True)
+        elif (compra_venta == cons.SELL) & (tipo == cons.MARKET):
+            order = client.market_order_sell(client_order_id=client_order_id,
+                                             product_id=crypto,
+                                             base_size=str(sizefunds))
+        elif (compra_venta == cons.SELL) & (tipo == cons.LIMIT):
+            order = client.limit_order_gtc_sell(client_order_id=client_order_id,
+                                                product_id=crypto,
+                                                base_size=str(sizefunds),
+                                                limit_price=str(price_bidask),
+                                                post_only=True)
+        else:
+            order = []
+
+        if order['success']:
+            order_id = order[cons.RESPONSE][cons.ORDER_ID]
+            fills = client.get_fills(order_id=order_id)
+            logging.info(json.dumps(fills.to_dict(), indent=2))
+            # print(json.dumps(fills.to_dict(), indent=2))
+        else:
+            error_response = order[cons.ERROR_RESPONSE]
+            logging.info(error_response)
+            # print(error_response)
+        if cancel & (tipo == cons.LIMIT):
+            order_id = order[cons.RESPONSE][cons.ORDER_ID]
+            time.sleep(seg_cancel)
+            client.cancel_orders(order_ids=[order_id])
+
+    except Exception as e:
         time.sleep(0.1)
-        ordenes = []
-        print('error')
+        order = []
+        logging.info(f"Error processing order: {e}")
+        # print(f"Error processing order: {e}")
         pass
-    return ordenes
-
-
-def historic_df(crypto, api_url, auth, pag_historic):
-    vect_hist = {}
-    df_new = pd.DataFrame()
-    print('### Gathering Data... ')
-    r = rq.get(api_url + 'products/' + crypto + '/trades', auth=auth)
-    enlace = r.headers['Cb-After']
-    trades = [{'bids': [[float(x['price']), float(x['size']), 1]],
-               'asks': [[float(x['price']), float(x['size']), 1]],
-               'sequence': x['trade_id'],
-               'time': x['time']} for x in r.json()]
-    for i in tqdm.trange(pag_historic):
-        r = rq.get(api_url + 'products/' + crypto + '/trades?after=%s' % enlace, auth=auth)
-        time.sleep(0.3)
-        enlace = r.headers['Cb-After']
-        valores = r.json()
-        # trades = trades + [float(x['price']) for x in r.json()]
-        trades += [{'bids': [[float(x['price']), float(x['size']), 1]],
-                    'asks': [[float(x['price']), float(x['size']), 1]],
-                    'sequence': x['trade_id'],
-                    'time': x['time'],
-                    'side': x['side']} for x in r.json()]
-    df_new = pd.DataFrame.from_dict(trades)
-    hist_df = df_new.sort_values('time')
-    return hist_df
-
-
-def sma(n, datos):
-    if (len(datos) > n):
-        media = sum(datos[-n:]) / n
-        return round(media, 5)
-    else:
-        return round(datos[0], 5)
-
-
-def ema(n, datos, alpha, media_ant):
-    if len(datos) > n:
-        expmedia = datos[-1] * alpha + (1 - alpha) * media_ant[-1]
-        return round(expmedia, 5)
-    else:
-        return round(datos[0], 5)
-
-
-def medias_exp(bids_asks, n_rapida=60, n_lenta=360):
-    '''
-    :param bids_asks: lista de valores sobre los que calcular las medias exponenciales
-    :param n_rapida: periodo de calculo media rapida-nerviosa
-    :param n_lenta: periodo de calculo media lenta-tendencia
-    :return: lista de listas de valores correspondientes a las medias rapida y lenta
-    '''
-    mediavar_rapida = []
-    mediavar_lenta = []
-    expmediavar_rapida = []
-    expmediavar_lenta = []
-    for i in range(len(bids_asks)):
-        mediavar_rapida.append(sma(n_rapida, bids_asks[:i + 1]))
-        mediavar_lenta.append(sma(n_lenta, bids_asks[:i + 1]))
-        if len(expmediavar_rapida) <= n_rapida + 1:
-            expmediavar_rapida.append(mediavar_rapida[-1])
-        else:
-            expmediavar_rapida.append(ema(n_rapida, bids_asks[:i + 1], 2.0 / (n_rapida + 1), expmediavar_rapida))
-
-        if len(expmediavar_lenta) <= n_lenta + 1:
-            expmediavar_lenta.append(mediavar_lenta[-1])
-        else:
-            expmediavar_lenta.append(ema(n_lenta, bids_asks[:i + 1], 2.0 / (n_lenta + 1), expmediavar_lenta))
-    return [expmediavar_rapida, expmediavar_lenta]
-
-
-def df_medias_bids_asks(bids_asks, crypto, fechas, n_rapida=60, n_lenta=360):
-    '''
-    :param bids_asks: lista para formar el dataframe
-    :param crypto: moneda
-    :param fechas: lista fechas
-    :param n_rapida: parametros medias para calculos medias exponenciales
-    :param n_lenta: parametros medias para calculos medias exponenciales
-    :return:
-    '''
-    df_bids_asks = pd.DataFrame(fechas)
-    df_bids_asks['expmedia_rapida'] = medias_exp(bids_asks, n_rapida, n_lenta)[0]
-    df_bids_asks['expmedia_lenta'] = medias_exp(bids_asks, n_rapida, n_lenta)[1]
-    df_bids_asks[crypto] = bids_asks
-    df_bids_asks['time'] = fechas
-    return df_bids_asks
+    return order
 
 
 def limite_tamanio(tamanio_listas_min, factor_tamanio, lista_a_limitar):
@@ -302,34 +476,88 @@ def pintar_grafica(df, crypto):
     :param crypto: Moneda
     :return: grafica
     '''
+    mpl.use('TkAgg')
     fig2 = plt.figure(2)
     ax2 = fig2.add_subplot(111)
     plt.plot(df['time'].values, df[crypto], label=crypto)
     ax2.plot(df['time'].values, df['expmedia_rapida'], label='expmedia_rapida')
     ax2.plot(df['time'].values, df['expmedia_lenta'], label='expmedia_lenta')
     ax2.legend()
-    plt.xticks(rotation='45')
+    plt.xticks(rotation=45)
     plt.show()
 
 
-def automated_mail(smtp, port, sender, password, receivers, subject, message):
+def automated_mail(smtp, port, sender, password, receivers, receivers_cc=[], receivers_bcc=[], subject='',
+                   message='', format='plain', files=[], mimetype="vnd.ms-excel"):
+    """
+        This function send email to a list of destination email list
+        Args:
+
+            smtp: client host string - example smtp.office365.com
+            port: port host integer - example 587
+            sender: email sender - string
+            password: password email sender - string
+            receivers: list of receipts emails - list
+            receivers_cc: list of receipts Cc emails - list
+            receivers_bcc: list of receipts BCc (hide copy) emails - list
+            subject: message subject - string
+            message: message - string
+            format: 'plain' or 'html'
+            files: list of strings with paths for files
+            mimetype: type of content sent
+
+        Returns:
+            response: response txt
+    """
     try:
         msg = MIMEMultipart()
         msg['From'] = sender
-        msg['To'] = receivers
+        msg['To'] = ', '.join(receivers)
+        msg['Cc'] = ', '.join(receivers_cc)
+        msg['Bcc'] = ', '.join(receivers_bcc)
         msg['Subject'] = subject
-        msg.attach(MIMEText(message, 'plain'))
+        msg.attach(MIMEText(message, format))
+        for path in files:
+            part = MIMEBase('application', mimetype)
+            with open(path, 'rb') as file:
+                part.set_payload(file.read())
+            encoders.encode_base64(part)
+            part.add_header('Content-Disposition', 'attachment; filename={}'.format(Path(path).name))
+            msg.attach(part)
         server = smtplib.SMTP(smtp, port)
         server.starttls()
         server.login(msg['From'], password)
-        server.sendmail(msg['From'], msg['To'], msg.as_string())
+        server.sendmail(msg['From'], receivers, msg.as_string())
         response = "Successfully sent Email"
         server.quit()
     # except SMTPException:
     except Exception as e:
         response = "Error: unable to send Email"
-        print(e)
+        logging.info(f"Error: unable to send Email - {e}")
+        print(f"Error: unable to send Email - {e}")
     return print(response)
+
+
+#
+# # OLD
+# def automated_mail(smtp, port, sender, password, receivers, subject, message):
+#     try:
+#         msg = MIMEMultipart()
+#         msg['From'] = sender
+#         msg['To'] = receivers
+#         msg['Subject'] = subject
+#         msg.attach(MIMEText(message, 'plain'))
+#         server = smtplib.SMTP(smtp, port)
+#         server.starttls()
+#         server.login(msg['From'], password)
+#         server.sendmail(msg['From'], msg['To'], msg.as_string())
+#         response = "Successfully sent Email"
+#         server.quit()
+#     # except SMTPException:
+#     except Exception as e:
+#         response = "Error: unable to send Email"
+#         print(e)
+#     return print(response)
 
 
 def automated_whatsapp(client, from_phone, body, to_phone):
@@ -364,6 +592,12 @@ def fechas_time(df):
     return fecha
 
 
+def fechas_time_utc(df):
+    fecha = dateutil.parser.parse(df)
+    fecha = fecha.replace(tzinfo=None)
+    return fecha
+
+
 def tramo_inv(crypto, n_tramos, lista_maximos_records, precio_instantaneo, valor_max_tiempo_real):
     """
     :param crypto: criptomoneda, de la variable crypto
@@ -373,8 +607,10 @@ def tramo_inv(crypto, n_tramos, lista_maximos_records, precio_instantaneo, valor
     :param valor_max_tiempo_real: valor maximo para mockear en caso de no haber datos en bbdd - max del historico
     :return:
     """
+    lista_tramos = []
     try:
-        lista_maximos = list(lista_maximos_records.find({'crypto': crypto}, {"_id": 0}))[0]['lista_maximos']
+        # lista_maximos = list(lista_maximos_records.find({'crypto': crypto}, {"_id": 0}))[0]['lista_maximos']
+        lista_maximos = lista_maximos_records.search(where(cons.CRYPTO) == crypto)[0][cons.LISTA_MAXIMOS]
         lecturabbddmax = max(max(lista_maximos), precio_instantaneo)
         lista_tramos = [lecturabbddmax]
         for item in range(1, n_tramos + 1):
@@ -399,37 +635,30 @@ def tramo_inv(crypto, n_tramos, lista_maximos_records, precio_instantaneo, valor
     return [tramo_actual, lista_tramos]
 
 
-def trigger_list_last_buy(records, trigger_tramos, tramo_actual, eur, inversion_fija_eur):
+def trigger_list_last_buy(records):
     """
     :param records: el json con la lectura de la bbdd
-    :param trigger_tramos: trigger para activacion o no de los tramos
-    :param tramo_actual: el tramo en el que esta situado el precio actual
-    :param eur: eur disponibles en la cuenta
-    :param inversion_fija_eur: cantidad fija que se invierte en la compra
     :return: una lista con varios elementos
     """
-    nummax = 9999999
-    lista_last_buy = list(records.find({}, {"_id": 0}))
-    if trigger_tramos:
-        lista_last_buy = [x for x in lista_last_buy if tramo_actual == x['tramo']]
-    if (lista_last_buy == []) & (eur >= inversion_fija_eur):
+    lista_last_buy = records.all()
+    if lista_last_buy == []:
         orden_filled_size = 0
-        lista_last_buy = [nummax]
-        lista_last_sell = [nummax]
+        lista_last_buy = []
+        lista_last_sell = []
         trigger = True
     elif lista_last_buy != []:
         try:
-            orden_filled_size = lista_last_buy[-1]['orden_filled_size']
-            lista_last_buy = [lista_last_buy[-1]['last_buy']]
+            orden_filled_size = lista_last_buy[-1][cons.ORDEN_FILLED_SIZE]
+            lista_last_buy = [lista_last_buy[-1]]
         except Exception as e:
             print(e)
             orden_filled_size = 0
-            lista_last_buy = [nummax]
-        lista_last_sell = [nummax]
+            lista_last_buy = []
+        lista_last_sell = []
         trigger = False
     else:
-        lista_last_buy = [nummax]
-        lista_last_sell = [nummax]
+        lista_last_buy = []
+        lista_last_sell = []
         orden_filled_size = 0
         trigger = False
     return [lista_last_buy, lista_last_sell, orden_filled_size, trigger]
@@ -442,7 +671,7 @@ def random_name():
         [list(letters.keys())[int(x)].lower() for x in a[:10]] + \
         [str(int(x)) for x in a[10:]]
     random.shuffle(b)
-    c = ''.join(b)
+    c = 'IV' + ''.join(b)
     return c
 
 
@@ -453,10 +682,23 @@ def bool_compras_previas(tramo_actual, records):
     :param records: base de datos de db.ultima_compra_records
     :return: boolean
     """
-    lista_prev_buy = list(records.find({}, {"_id": 0}))
+    lista_prev_buy = records.all()
+    # lista_prev_buy = list(records.find({}, {"_id": 0}))
     lista_prev_buy = [x for x in lista_prev_buy if x['tramo'] != tramo_actual]
     if not lista_prev_buy:
         boolbuy = False
     else:
         boolbuy = True
     return boolbuy
+
+
+def on_message(msg):
+    global order_filled
+    global limit_order_id
+    message_data = json.loads(msg)
+    if 'channel' in message_data and message_data['channel'] == 'user':
+        orders = message_data['events'][0]['orders']
+        for order in orders:
+            order_id = order['order_id']
+            if order_id == limit_order_id and order['status'] == 'FILLED':
+                order_filled = True
