@@ -513,14 +513,18 @@ if __name__ == "__main__":
             # LOGGING CONDICIONES COMPRA-VENTA Y PAUSAS INFO-GENERAL
             # CALCULO PAUSAS
             contador_ciclos += 1  # para poder comparar hacia atrśs freq*time_required = num_ciclos hacia atras
-            time.sleep(tiempo_pausa_new(time.perf_counter() - t0, param.FREQ_EXEC))
+            t_pausa = tiempo_pausa_new(time.perf_counter() - t0, param.FREQ_EXEC)
+            time.sleep(t_pausa)
             t_ciclo = round(time.perf_counter() - t0, 2)
             t_ciclo_medio_list.append(t_ciclo)
             t_ciclo_medio = np.mean(t_ciclo_medio_list)
             # print(contador_ciclos)
             if contador_ciclos % param.TIME_CONDICIONES_COMPRAVENTA_LOGS == 0:
-                crypto_log.info(f"El tiempo transcurrido por ciclo es: {t_ciclo} seg.")
+                crypto_log.info(f'Numero de ciclos: {contador_ciclos}')
+                crypto_log.info(f"La frecuencia deseada por ciclo es: {param.FREQ_EXEC} Hz.")
+                crypto_log.info(f"El tiempo real transcurrido por ciclo es: {t_ciclo} seg.")
                 crypto_log.info(f"El tiempo medio transcurrido por ciclo es: {t_ciclo_medio} seg.")
+                crypto_log.info(f"La pausa forzada por ciclo es: {t_pausa} seg.")
                 crypto_log.info(tramo_actual)
                 crypto_log.info(dicc_cond_compraventa)
                 crypto_log.info(f"condiciones_compra_total = {condiciones_compra_total}")
@@ -528,7 +532,6 @@ if __name__ == "__main__":
                     crypto_log.info(f"condiciones_venta_total = {condiciones_venta_list[item]}")
 
             if contador_ciclos % param.TIME_PAUSAS_LOGS == 0:
-                crypto_log.info(f'Numero de ciclos: {contador_ciclos}')
                 crypto_log.info(f'Precio compra bidask: {precio_compra_bidask} eur.')
                 crypto_log.info(f'Precio venta bidask: {precio_venta_bidask} eur.')
                 crypto_log.info(f'phigh: {str(round(phigh, 5))} eur.')

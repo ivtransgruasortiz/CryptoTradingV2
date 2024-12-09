@@ -4,8 +4,8 @@ INVERSION_FIJA_EUR = 200  # cantidad en eur maximo por operación
 DELETE_LOGS = False
 TIME_PAUSAS_LOGS = 300
 TIME_CONDICIONES_COMPRAVENTA_LOGS = 120
-T_COMPRA_LIMIT = 10  # seconds
-T_VENTA_LIMIT = 10  # seconds
+T_COMPRA_LIMIT = 5  # seconds
+T_VENTA_LIMIT = 5  # seconds
 
 API_URL = 'https =//api.coinbase.com/api/v3/brokerage/'
 
@@ -26,7 +26,7 @@ PMAX = 80  # percentil superior seguridad - ideal 50
 PMIN = 20  # percentil inferior seguridad - ideal 20
 MARGENMAX = 0.15  # Margen limite alrededor del maximo historico para operar con seguridad - ideal 0.1
 
-T_HOURS_BACK = 6
+T_HOURS_BACK = 8
 FREQ_EXEC = 0.5  # frecuencia máxima de ejecución por ciclo Hz - ideal 0.5
 CONTADOR_CICLOS = 0  # contador de ciclos
 FACTOR_TAMANIO = 100  # factor por el que multiplicar el numero de ciclos para limitar tamanio listas
@@ -37,13 +37,13 @@ N_RAPIDA_ASKS = 15  # intervalo para el calculo de la media rapida en los asks (
 N_LENTA_ASKS = 60  # intervalo para el calculo de la media lenta en los bids (ventas) utilizado en nuestras compras de cripto - 40
 N_MEDIA = 10  # Numero de valores para calcular la media en los porcetajes_variacion_tiempo
 
-TIME_PERCEN_DICC = {"tiempo_caida_max": 10800,  # tiempo máximo de caida en segundos - si estamos rozando maximos historicos - ideal 1800
+TIME_PERCEN_DICC = {"tiempo_caida_max": 18000,  # tiempo máximo de caida en segundos - si estamos rozando maximos historicos - ideal 1800
                     "porcentaje_caida_max": 0.05,  # porcentaje de caída minimo necesario para la compra - si estamos rozando maximos historicos - ideal = 0.06
-                    "tiempo_caida_1": 10800,  # tiempo máximo de caida en segundos - ideal 120min = 7200seg
+                    "tiempo_caida_1": 18000,  # tiempo máximo de caida en segundos - ideal 120min = 7200seg
                     "porcentaje_caida_1": 0.04,  # porcentaje de caída minimo necesario para la compra - ideal 0.04
-                    "tiempo_caida_2": 1800,  # tiempo máximo de caida en segundos - ideal 900
+                    "tiempo_caida_2": 3600,  # tiempo máximo de caida en segundos - ideal 900
                     "porcentaje_caida_2": 0.03,  # porcentaje de caída minimo necesario para la compra - ideal 0.04
-                    "tiempo_caida_min": 900,  # tiempo máximo de caida en segundos - si estamos en condiciones ideales 900 seg
+                    "tiempo_caida_min": 3600,  # tiempo máximo de caida en segundos - si estamos en condiciones ideales 900 seg
                     "porcentaje_caida_min": 0.02,  # porcentaje de caída minimo necesario para la compra - si estamos en condiciones ideales - ideal 0.05
                     "tiempo_caida_stop": 7200,  # tiempo stop de caida en segundos - si estamos en situacion de stoploss
                     "porcentaje_caida_stop": 0.07,  # porcentaje de caída minimo necesario para la compra - si estamos en situacion de stoploss
