@@ -385,12 +385,12 @@ def condiciones_buy_sell(precio_compra_bidask, precio_venta_bidask, porcentaje_c
         condicion = False
         precio = None
     dicc_condiciones = {
-        "trigger": trigger,
-        "condicion_fondos_suficientes": condicion_fondos_suficientes,
-        "condicion_media_compra": condicion_media_compra,
-        "condicion_media_venta": condicion_media_venta,
-        "condicion_porcentaje_caida": condicion_porcentaje_caida,
-        "condicion_venta_superior_margen_beneficio": condicion_venta_superior_margen_beneficio
+        "trigger_compra": trigger,
+        "COMPRA-cond_fondos_suficientes": condicion_fondos_suficientes,
+        "COMPRA-cond_porcentaje_caida": condicion_porcentaje_caida,
+        "COMPRA-cond_media_compra": condicion_media_compra,
+        "VENTA-cond_media_venta": condicion_media_venta,
+        "VENTA-cond_beneficio": condicion_venta_superior_margen_beneficio
     }
     return [condicion, precio, dicc_condiciones]
 
@@ -438,7 +438,7 @@ def buy_sell(compra_venta, crypto, tipo, api_key, api_secret, n_decim_price, n_d
         else:
             order = []
 
-        if order['success']:
+        if order[cons.SUCCESS]:
             order_id = order[cons.RESPONSE][cons.ORDER_ID]
             fills = client.get_fills(order_id=order_id)
             logging.info(json.dumps(fills.to_dict(), indent=2))

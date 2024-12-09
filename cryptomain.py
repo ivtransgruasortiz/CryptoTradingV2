@@ -348,7 +348,10 @@ if __name__ == "__main__":
 
             # ORDEN DE COMPRA
             if condiciones_compra_total:
-                crypto_log.info("buy-order sent!!!")
+                crypto_log.info("\n#################"
+                                "\nbuy-order sent!!!"
+                                "\n#################"
+                                "\n")
                 try:
                     # orden_compra = buy_sell(cons.BUY,
                     #                         param.CRYPTO,
@@ -456,7 +459,10 @@ if __name__ == "__main__":
                 condiciones_venta_list.append(condiciones_venta)
                 # ORDEN DE VENTA
                 if condiciones_venta[0]:
-                    crypto_log.info("sell-order sent!!!")
+                    crypto_log.info("\n##################"
+                                    "\nsell-order sent!!!"
+                                    "\n##################"
+                                    "\n")
                     try:
                         # orden_venta = buy_sell(cons.SELL,
                         #                        param.CRYPTO,
@@ -476,7 +482,7 @@ if __name__ == "__main__":
                                                price_bidask=precio_venta_limit)  # LIMIT SELL
                         if orden_venta[cons.SUCCESS]:
                             id_venta = orden_venta[cons.RESPONSE][cons.ORDER_ID]
-                            id_venta_user = orden_compra[cons.RESPONSE][cons.CLIENT_ORDER_ID]
+                            id_venta_user = orden_venta[cons.RESPONSE][cons.CLIENT_ORDER_ID]
                             order_filled = False
                             ts0 = time.perf_counter()
                             while not order_filled:
