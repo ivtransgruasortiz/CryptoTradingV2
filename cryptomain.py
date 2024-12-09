@@ -85,7 +85,8 @@ if __name__ == "__main__":
 
     print(
         f"""\nRunning with arguments:
-            - local_execution: {local_execution}"""
+            - local_execution: {local_execution}
+            - CRYPTO-Trading with {param.CRYPTO}"""
     )
 
     # # PARA CODIFICAR
@@ -317,10 +318,11 @@ if __name__ == "__main__":
                 tiempo_caida = parametros[1]
                 porcentaje_beneficio = parametros[2]
                 try:
-                    porcentaje_inst_tiempo = porcentaje_variacion_inst_tiempo(df_tot,
-                                                                              tiempo_caida,
-                                                                              param.N_MEDIA,
-                                                                              cons.ASKS_1)
+                    porcentaje_inst_tiempo_list = porcentaje_variacion_inst_tiempo(df_tot,
+                                                                                   tiempo_caida,
+                                                                                   param.N_MEDIA,
+                                                                                   cons.ASKS_1)
+                    porcentaje_inst_tiempo = porcentaje_inst_tiempo_list[0]
                 except Exception as e:
                     crypto_log.info(e)
                     print('No hay lecturas, df_tot no abarca todo el tiempo considerado')
@@ -421,7 +423,6 @@ if __name__ == "__main__":
 
             # BUCLE PARA EJECUTAR TODAS LAS VENTAS SI SE DAN LAS CONDICIONES - PARA TODOS LOS TRAMOS
             lista_last_buy_bbdd = records_ultima_compra.all()
-            lista_last_buy_bbdd = [x for x in lista_last_buy_bbdd if x[cons.ID_COMPRA_BBDD]=="6f934eea-bd36-4943-bc6e-4ff9f7820750"]
             lista_last_buy_tramo = []
             if not lista_last_buy_bbdd:
                 trigger = True
@@ -441,6 +442,7 @@ if __name__ == "__main__":
                     orden_filled_price = None
                     porcentaje_beneficio = None
                     tramo_actual_compra = None
+                    crypto_log.info('Error lectura bbdd')
                     print('Error lectura bbdd')
 
                 # CONDICIONES VENTA
@@ -490,8 +492,9 @@ if __name__ == "__main__":
                                 crypto_log.info(f"order sell {id_venta} filled!")
                                 orden_filled_size = math.trunc(float(orden_detail[cons.ORDER][cons.FILLED_SIZE])
                                                                * 10 ** n_decim_size) / 10 ** n_decim_size
-                                orden_filled_price = math.trunc(float(orden_detail[cons.ORDER][cons.AVERAGE_FILLED_PRICE])
-                                                                * 10 ** n_decim_price) / 10 ** n_decim_price
+                                orden_filled_price = math.trunc(
+                                    float(orden_detail[cons.ORDER][cons.AVERAGE_FILLED_PRICE])
+                                    * 10 ** n_decim_price) / 10 ** n_decim_price
                                 orden_fees = math.trunc(float(orden_detail[cons.ORDER][cons.TOTAL_FEES])
                                                         * 10 ** n_decim_price) / 10 ** n_decim_price
                                 lista_last_sell.append(orden_filled_price)
@@ -530,7 +533,11 @@ if __name__ == "__main__":
                 crypto_log.info(f'Precio venta bidask: {precio_venta_bidask} eur.')
                 crypto_log.info(f'phigh: {str(round(phigh, 5))} eur.')
                 crypto_log.info(f'plow: {str(round(plow, 5))} eur.')
-                crypto_log.info(f'Dif_inst_max: {str(round(porcentaje_inst_tiempo * 100, 2))} %')
+                crypto_log.info(f'Dif_inst_max_%: {str(round(porcentaje_inst_tiempo * 100, 2))} %')
+                crypto_log.info(f'Dif_inst_max: {str(round(porcentaje_inst_tiempo, 2))} %')
+                crypto_log.info(f'Dif_inst_max_eur: {porcentaje_inst_tiempo_list[1]} eur.')
+                crypto_log.info(f'Realtime_value: {porcentaje_inst_tiempo_list[1]} eur.')
+                crypto_log.info(f'Max_value_in_lastl_{tiempo_caida}_seconds: {porcentaje_inst_tiempo_list[2]} eur.')
         except (KeyboardInterrupt, SystemExit):  # ctrl + c
             crypto_log.info('\n'
                             '############'
