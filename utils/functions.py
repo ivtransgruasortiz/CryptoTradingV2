@@ -327,19 +327,21 @@ def percentil(dflista, time_percen_dicc, lecturabbddmax, pmax, pmin, margenmax, 
     return [cond, phigh, plow]
 
 
-def porcentaje_variacion_inst_tiempo(df, tiempo_atras, n_media, tipo):
+def porcentaje_variacion_inst_tiempo(df, tiempo_atras, tipo):
     """
     :param df: dataframe con precios y times
     :param tiempo_atras: tiempo que queremos recorrer hacia atrás para comparar en segundos
-    :param n_media: para hacer la media de los n_media valores de precio
-    ;tipo 'bids_1' or 'asks_1'
-    :return: valor de % en tanto por uno de la variación sufrida por el valor (ojo!! en tanto por uno, no en %)
+    :param tipo: 'bids_1' or 'asks_1'
+    :return: lista de valores [variacion_max, ult_valor, df_cut_max, diff_eur]
+        valor de % en tanto por uno de la variación sufrida por el valor (ojo!! en tanto por uno, no en %)
     """
     df_cut = df[df['time_1'] >= (datetime.datetime.utcnow().replace(tzinfo=None) -
                                  datetime.timedelta(seconds=tiempo_atras))]
     df_cut_max = max(df_cut[tipo])
-    variacion_max = math.trunc(((df[tipo].iloc[-1] / df_cut_max) - 1) * 10000) / 10000
-    return variacion_max
+    ult_valor = df[tipo].iloc[-1]
+    diff_eur = ult_valor - df_cut_max
+    variacion_max = math.trunc(((ult_valor / df_cut_max) - 1) * 10000) / 10000
+    return [variacion_max, ult_valor, df_cut_max, diff_eur]
 
 
 def stoploss(lista_last_buy, precio_instantaneo, porcentaje_limite_stoploss, nummax, stoplossmarker, trigger):
@@ -364,11 +366,12 @@ def condiciones_buy_sell(precio_compra_bidask, precio_venta_bidask, porcentaje_c
     try:
         condicion_venta_superior_margen_beneficio = \
             precio_compra_bidask > last_buy[-1][cons.ORDEN_FILLED_PRICE] * (1 + porcentaje_beneficio)
-    except IndexError as e:
+    except IndexError as e1:
         condicion_venta_superior_margen_beneficio = False
-    finally:
+        logging.info(f"error condition: {e1}")
+    except Exception as e2:
         condicion_venta_superior_margen_beneficio = False
-        pass
+        logging.info(f"error condition: {e2}")
     if (tipo == cons.BUY) & condicion_fondos_suficientes & trigger & condicion_media_compra & \
             condicion_porcentaje_caida:
         condicion = True
