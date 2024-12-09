@@ -86,7 +86,7 @@ if __name__ == "__main__":
     print(
         f"""\nRunning with arguments:
             - local_execution: {local_execution}
-            - CRYPTO-Trading with {param.CRYPTO}"""
+            - CRYPTO-Trading with: {param.CRYPTO}"""
     )
 
     # # PARA CODIFICAR
@@ -261,6 +261,7 @@ if __name__ == "__main__":
             medias_exp_rapida_asks = limite_tamanio(tamanio_listas_min, param.FACTOR_TAMANIO, medias_exp_rapida_asks)
             medias_exp_lenta_asks = limite_tamanio(tamanio_listas_min, param.FACTOR_TAMANIO, medias_exp_lenta_asks)
             t_ciclo_medio_list = limite_tamanio(tamanio_listas_min, param.FACTOR_TAMANIO, t_ciclo_medio_list)
+            t_ciclo_real_medio_list = limite_tamanio(tamanio_listas_min, param.FACTOR_TAMANIO, t_ciclo_real_medio_list)
 
             # FONDOS_DISPONIBLES
             disp_ini_sdk = get_accounts_sdk(api_key, api_secret)
@@ -512,6 +513,9 @@ if __name__ == "__main__":
             # LOGGING CONDICIONES COMPRA-VENTA Y PAUSAS INFO-GENERAL
             # CALCULO PAUSAS
             contador_ciclos += 1  # para poder comparar hacia atrśs freq*time_required = num_ciclos hacia atras
+            t_ciclo_real = round(time.perf_counter() - t0, 2)
+            t_ciclo_real_medio_list.append(t_ciclo_real)
+            t_ciclo_real_medio = np.mean(t_ciclo_real_medio_list)
             t_pausa = tiempo_pausa_new(time.perf_counter() - t0, param.FREQ_EXEC)
             time.sleep(t_pausa)
             t_ciclo = round(time.perf_counter() - t0, 2)
@@ -521,8 +525,10 @@ if __name__ == "__main__":
             if contador_ciclos % param.TIME_CONDICIONES_COMPRAVENTA_LOGS == 0:
                 crypto_log.info(f'Numero de ciclos: {contador_ciclos}')
                 crypto_log.info(f"La frecuencia deseada por ciclo es: {param.FREQ_EXEC} Hz.")
-                crypto_log.info(f"El tiempo real transcurrido por ciclo es: {t_ciclo} seg.")
-                crypto_log.info(f"El tiempo medio transcurrido por ciclo es: {t_ciclo_medio} seg.")
+                crypto_log.info(f"El tiempo real transcurrido por ciclo es: {t_ciclo_real} seg.")
+                crypto_log.info(f"El tiempo real medio transcurrido por ciclo es: {t_ciclo_real_medio} seg.")
+                crypto_log.info(f"El tiempo total transcurrido por ciclo es: {t_ciclo} seg.")
+                crypto_log.info(f"El tiempo total medio transcurrido por ciclo es: {t_ciclo_medio} seg.")
                 crypto_log.info(f"La pausa forzada por ciclo es: {t_pausa} seg.")
                 crypto_log.info(tramo_actual)
                 crypto_log.info(dicc_cond_compraventa)
@@ -536,10 +542,9 @@ if __name__ == "__main__":
                 crypto_log.info(f'phigh: {str(round(phigh, 5))} eur.')
                 crypto_log.info(f'plow: {str(round(plow, 5))} eur.')
                 crypto_log.info(f'Dif_inst_max_%: {str(round(porcentaje_inst_tiempo * 100, 2))} %')
-                crypto_log.info(f'Dif_inst_max: {str(round(porcentaje_inst_tiempo, 2))} %')
-                crypto_log.info(f'Dif_inst_max_eur: {porcentaje_inst_tiempo_list[1]} eur.')
+                crypto_log.info(f'Dif_inst_max_eur: {porcentaje_inst_tiempo_list[0]} eur.')
                 crypto_log.info(f'Realtime_value: {porcentaje_inst_tiempo_list[1]} eur.')
-                crypto_log.info(f'Max_value_in_lastl_{tiempo_caida}_seconds: {porcentaje_inst_tiempo_list[2]} eur.')
+                crypto_log.info(f'Max_value_in_last_{tiempo_caida}_seconds: {porcentaje_inst_tiempo_list[2]} eur.')
         except (KeyboardInterrupt, SystemExit):  # ctrl + c
             crypto_log.info('\n'
                             '############'
