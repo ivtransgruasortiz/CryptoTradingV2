@@ -335,7 +335,7 @@ def porcentaje_variacion_inst_tiempo(df, tiempo_atras, tipo):
     :return: lista de valores [variacion_max, ult_valor, df_cut_max, diff_eur]
         valor de % en tanto por uno de la variación sufrida por el valor (ojo!! en tanto por uno, no en %)
     """
-    df_cut = df[df['time_1'] >= (datetime.datetime.utcnow().replace(tzinfo=None) -
+    df_cut = df[df[cons.TIME_1] >= (datetime.datetime.utcnow().replace(tzinfo=None) -
                                  datetime.timedelta(seconds=tiempo_atras))]
     df_cut_max = max(df_cut[tipo])
     ult_valor = df[tipo].iloc[-1]
