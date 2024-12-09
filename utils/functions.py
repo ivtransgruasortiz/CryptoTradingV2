@@ -336,7 +336,7 @@ def porcentaje_variacion_inst_tiempo(df, tiempo_atras, tipo):
         valor de % en tanto por uno de la variación sufrida por el valor (ojo!! en tanto por uno, no en %)
     """
     df_cut = df[df[cons.TIME_1] >= (datetime.datetime.utcnow().replace(tzinfo=None) -
-                                 datetime.timedelta(seconds=tiempo_atras))]
+                                    datetime.timedelta(seconds=tiempo_atras))]
     df_cut_max = max(df_cut[tipo])
     ult_valor = df[tipo].iloc[-1]
     diff_eur = ult_valor - df_cut_max
@@ -368,10 +368,10 @@ def condiciones_buy_sell(precio_compra_bidask, precio_venta_bidask, porcentaje_c
             precio_compra_bidask > last_buy[-1][cons.ORDEN_FILLED_PRICE] * (1 + porcentaje_beneficio)
     except IndexError as e1:
         condicion_venta_superior_margen_beneficio = False
-        logging.info(f"error condition: {e1}")
+        # logging.info(f"error condition: {e1}")
     except Exception as e2:
         condicion_venta_superior_margen_beneficio = False
-        logging.info(f"error condition: {e2}")
+        # logging.info(f"error condition: {e2}")
     if (tipo == cons.BUY) & condicion_fondos_suficientes & trigger & condicion_media_compra & \
             condicion_porcentaje_caida:
         condicion = True
@@ -419,7 +419,7 @@ def buy_sell(compra_venta, crypto, tipo, api_key, api_secret, n_decim_price, n_d
                                             product_id=crypto,
                                             quote_size=str(sizefunds))
         elif (compra_venta == cons.BUY) & (tipo == cons.LIMIT):
-            base_size = math.trunc((sizefunds / price_bidask) * 10**n_decim_size) / 10**n_decim_size
+            base_size = math.trunc((sizefunds / price_bidask) * 10 ** n_decim_size) / 10 ** n_decim_size
             order = client.limit_order_gtc_buy(client_order_id=client_order_id,
                                                product_id=crypto,
                                                base_size=str(base_size),
