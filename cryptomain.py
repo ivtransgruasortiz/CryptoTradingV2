@@ -209,6 +209,7 @@ if __name__ == "__main__":
     time.sleep(5)
     t00 = time.perf_counter()
     t_ciclo_medio_list = []
+    t_ciclo_real_medio_list = []
 
     while True:
         try:
