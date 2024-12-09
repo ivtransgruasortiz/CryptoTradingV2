@@ -2,7 +2,7 @@
 
 INVERSION_FIJA_EUR = 200  # cantidad en eur maximo por operación
 DELETE_LOGS = False
-TIME_PAUSAS_LOGS = 300
+TIME_PAUSAS_LOGS = 120
 TIME_CONDICIONES_COMPRAVENTA_LOGS = 120
 T_COMPRA_LIMIT = 5  # seconds
 T_VENTA_LIMIT = 5  # seconds
