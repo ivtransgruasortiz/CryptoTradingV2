@@ -320,7 +320,6 @@ if __name__ == "__main__":
                 try:
                     porcentaje_inst_tiempo_list = porcentaje_variacion_inst_tiempo(df_tot,
                                                                                    tiempo_caida,
-                                                                                   param.N_MEDIA,
                                                                                    cons.ASKS_1)
                     porcentaje_inst_tiempo = porcentaje_inst_tiempo_list[0]
                 except Exception as e:
