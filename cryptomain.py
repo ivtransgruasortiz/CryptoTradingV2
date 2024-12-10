@@ -315,6 +315,7 @@ if __name__ == "__main__":
             tiempo_caida = param.TIME_PERCEN_DICC[cons.TIEMPO_CAIDA_MIN]
 
             dicc_cond_compraventa = []
+            porcentaje_inst_tiempo = param.PORCENTAJE_INST_TIEMPO
             for parametros in list(zip_param):
                 porcentaje_caida = parametros[0]
                 tiempo_caida = parametros[1]
@@ -325,9 +326,8 @@ if __name__ == "__main__":
                                                                                    cons.ASKS_1)
                     porcentaje_inst_tiempo = porcentaje_inst_tiempo_list[0]
                 except Exception as e:
-                    crypto_log.info(e)
-                    print('No hay lecturas, df_tot no abarca todo el tiempo considerado')
-                    porcentaje_inst_tiempo = 0.01
+                    crypto_log.info(f'No hay lecturas, df_tot no abarca todo el tiempo considerado: {e}')
+                    porcentaje_inst_tiempo = param.PORCENTAJE_INST_TIEMPO
                     pass
 
                 # COMPRAS
@@ -447,7 +447,6 @@ if __name__ == "__main__":
                     porcentaje_beneficio = None
                     tramo_actual_compra = None
                     crypto_log.info('Error lectura bbdd')
-                    print('Error lectura bbdd')
 
                 # CONDICIONES VENTA
                 condiciones_venta = \
