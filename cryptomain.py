@@ -556,7 +556,7 @@ if __name__ == "__main__":
                 crypto_log.info(f"Realtime_value seller == precio_compra_bidask: {precio_compra_bidask} eur.")
                 crypto_log.info(f'Max_value_in_last_{tiempo_caida}_seconds: {porcentaje_inst_tiempo_list[2]} eur.')
                 crypto_log.info(f'Dif_inst_max_%: {str(round(porcentaje_inst_tiempo * 100, 2))} %')
-                crypto_log.info(f'Dif_inst_max_eur: {porcentaje_inst_tiempo_list[3]} eur.')
+                crypto_log.info(f'Dif_inst_max_eur: {round(porcentaje_inst_tiempo_list[3], n_decim_price)} eur.')
                 crypto_log.info(tramo_actual)
                 crypto_log.info(dicc_cond_compraventa)
                 crypto_log.info(f"condiciones_compra_total = {condiciones_compra_total}")
