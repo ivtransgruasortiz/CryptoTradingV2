@@ -437,26 +437,21 @@ def buy_sell(compra_venta, crypto, tipo, api_key, api_secret, n_decim_price, n_d
                                                 post_only=True)
         else:
             order = []
-
         if order[cons.SUCCESS]:
             order_id = order[cons.RESPONSE][cons.ORDER_ID]
             fills = client.get_fills(order_id=order_id)
+            logging.info(f"Order {tipo} sent - SUCCESS!!")
             logging.info(json.dumps(fills.to_dict(), indent=2))
-            # print(json.dumps(fills.to_dict(), indent=2))
         else:
             error_response = order[cons.ERROR_RESPONSE]
             logging.info(error_response)
-            # print(error_response)
-        if cancel & (tipo == cons.LIMIT):
-            order_id = order[cons.RESPONSE][cons.ORDER_ID]
-            time.sleep(seg_cancel)
-            client.cancel_orders(order_ids=[order_id])
-
+        # if cancel & (tipo == cons.LIMIT):
+        #     order_id = order[cons.RESPONSE][cons.ORDER_ID]
+        #     time.sleep(seg_cancel)
+        #     client.cancel_orders(order_ids=[order_id])
     except Exception as e:
-        time.sleep(0.1)
         order = []
         logging.info(f"Error processing order: {e}")
-        # print(f"Error processing order: {e}")
         pass
     return order
 
