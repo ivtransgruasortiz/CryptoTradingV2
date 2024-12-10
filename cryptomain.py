@@ -10,6 +10,7 @@ import ssl
 import sys
 import time
 
+import tweepy
 from coinbase.websocket import WSClient
 from dateutil import tz
 from dateutil.tz import *
@@ -102,6 +103,25 @@ if __name__ == "__main__":
     token_api_secret = cred.token_api_secret
     api_key = decrypt(token_api_key, passphrase.encode()).decode().replace("\\n", "\n")
     api_secret = decrypt(token_api_secret, passphrase.encode()).decode().replace("\\n", "\n")
+
+    # # Twitter #############################################################################
+    # x_api_key = ""
+    # x_api_key_secret = ""
+    # x_acces_token = ""
+    # x_acces_token_secret = ""
+    #
+    # client = tweepy.Client(
+    #     consumer_key=x_api_key, consumer_secret=x_api_key_secret,
+    #     access_token=x_acces_token, access_token_secret=x_acces_token_secret
+    # )
+    # message_twitter = f'Hi!! ivcryptotrading TEST ' \
+    #                   f'@ivquantic'
+    # response = client.create_tweet(
+    #     text=f"{message_twitter}"
+    # )
+    # response.values()
+    # print(f"https://twitter.com/user/status/{response.data['id']}")
+    # #######################################################################################
 
     ###########################
     # START REAL-TIME TRADING #
