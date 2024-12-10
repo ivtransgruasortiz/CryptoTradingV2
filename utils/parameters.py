@@ -6,6 +6,7 @@ TIME_PAUSAS_LOGS = 120
 TIME_CONDICIONES_COMPRAVENTA_LOGS = 120
 T_COMPRA_LIMIT = 5  # seconds
 T_VENTA_LIMIT = 5  # seconds
+PORCENTAJE_INST_TIEMPO = 0.0  # valor constante en caso de error
 
 API_URL = 'https =//api.coinbase.com/api/v3/brokerage/'
 
@@ -27,14 +28,14 @@ PMIN = 20  # percentil inferior seguridad - ideal 20
 MARGENMAX = 0.15  # Margen limite alrededor del maximo historico para operar con seguridad - ideal 0.1
 
 T_HOURS_BACK = 8
-FREQ_EXEC = 0.5  # frecuencia máxima de ejecución por ciclo Hz - ideal 0.5
+FREQ_EXEC = 1  # frecuencia máxima de ejecución por ciclo Hz - ideal 0.5
 CONTADOR_CICLOS = 0  # contador de ciclos
 FACTOR_TAMANIO = 100  # factor por el que multiplicar el numero de ciclos para limitar tamanio listas
 
 N_RAPIDA_BIDS = 15  # intervalo para el calculo de la media rapida en los bids (compras) utilizado en nuestras ventas de cripto - ideal 15
-N_LENTA_BIDS = 60  # intervalo para el calculo de la media lenta en los bids (compras) utilizado en nuestras ventas de cripto - ideal 60
+N_LENTA_BIDS = 90  # intervalo para el calculo de la media lenta en los bids (compras) utilizado en nuestras ventas de cripto - ideal 60
 N_RAPIDA_ASKS = 15  # intervalo para el calculo de la media rapida en los asks (ventas) utilizado en nuestras compras de cripto - 10
-N_LENTA_ASKS = 60  # intervalo para el calculo de la media lenta en los bids (ventas) utilizado en nuestras compras de cripto - 40
+N_LENTA_ASKS = 90  # intervalo para el calculo de la media lenta en los bids (ventas) utilizado en nuestras compras de cripto - 40
 N_MEDIA = 10  # Numero de valores para calcular la media en los porcetajes_variacion_tiempo
 
 TIME_PERCEN_DICC = {"tiempo_caida_max": 18000,  # tiempo máximo de caida en segundos - si estamos rozando maximos historicos - ideal 1800
