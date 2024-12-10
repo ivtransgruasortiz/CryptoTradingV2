@@ -10,6 +10,7 @@ import ssl
 import sys
 import time
 
+import tweepy
 from coinbase.websocket import WSClient
 from dateutil import tz
 from dateutil.tz import *
@@ -103,6 +104,25 @@ if __name__ == "__main__":
     api_key = decrypt(token_api_key, passphrase.encode()).decode().replace("\\n", "\n")
     api_secret = decrypt(token_api_secret, passphrase.encode()).decode().replace("\\n", "\n")
 
+    # # Twitter #############################################################################
+    # x_api_key = ""
+    # x_api_key_secret = ""
+    # x_acces_token = ""
+    # x_acces_token_secret = ""
+    #
+    # client = tweepy.Client(
+    #     consumer_key=x_api_key, consumer_secret=x_api_key_secret,
+    #     access_token=x_acces_token, access_token_secret=x_acces_token_secret
+    # )
+    # message_twitter = f'Hi!! ivcryptotrading TEST ' \
+    #                   f'@ivquantic'
+    # response = client.create_tweet(
+    #     text=f"{message_twitter}"
+    # )
+    # response.values()
+    # print(f"https://twitter.com/user/status/{response.data['id']}")
+    # #######################################################################################
+
     ###########################
     # START REAL-TIME TRADING #
     ###########################
@@ -171,12 +191,12 @@ if __name__ == "__main__":
     cryptodb = TinyDB(cons.CRYPTODB)
     cryptodb_tables = cryptodb.tables()
     lista_maximos_records = cryptodb.table(cons.LISTA_MAXIMOS_RECORDS)
-    records_ultima_compra = cryptodb.table(cons.ULTIMA_COMPRA_RECORDS)
+    ultima_compra_records = cryptodb.table(cons.ULTIMA_COMPRA_RECORDS)
     all_trades_records = cryptodb.table(cons.ALL_TRADES_RECORDS)
 
     # # TO DELETE ALL DATA FROM DDBBs
     # lista_maximos_records.truncate()
-    # records_ultima_compra.truncate()
+    # ultima_compra_records.truncate()
     # all_trades_records.truncate()
 
     if lista_maximos_records.all() == []:
@@ -295,7 +315,7 @@ if __name__ == "__main__":
             valor_max_tiempo_real = df_tot[cons.BIDS_1].max()
             tramo_actual = tramo_inv(param.CRYPTO, param.N_TRAMOS, lista_maximos_records, precio_venta_bidask,
                                      valor_max_tiempo_real)
-            last_buy_trigg = trigger_list_last_buy(records_ultima_compra)
+            last_buy_trigg = trigger_list_last_buy(ultima_compra_records)
             lista_last_buy = last_buy_trigg[0]
             lista_last_sell = last_buy_trigg[1]
             orden_filled_size = last_buy_trigg[2]
@@ -311,10 +331,10 @@ if __name__ == "__main__":
             # PORCENTAJE DE VARIACION INSTANTANEA
             condiciones_compra_list = []
             porcentaje_beneficio_list = []
+            dicc_cond_compraventa = []
+            porcentaje_inst_tiempo_list = []
             porcentaje_caida = param.TIME_PERCEN_DICC[cons.PORCENTAJE_CAIDA_MIN]
             tiempo_caida = param.TIME_PERCEN_DICC[cons.TIEMPO_CAIDA_MIN]
-
-            dicc_cond_compraventa = []
             porcentaje_inst_tiempo = param.PORCENTAJE_INST_TIEMPO
             for parametros in list(zip_param):
                 porcentaje_caida = parametros[0]
@@ -348,9 +368,9 @@ if __name__ == "__main__":
 
             # ORDEN DE COMPRA
             if condiciones_compra_total:
-                crypto_log.info("\n#################"
+                crypto_log.info("\n##################"
                                 "\nbuy-order sent!!!"
-                                "\n#################"
+                                "\n##################"
                                 "\n")
                 try:
                     # orden_compra = buy_sell(cons.BUY,
@@ -384,7 +404,10 @@ if __name__ == "__main__":
                             orden_detail = client.get_order(order_id=id_compra)
                             order_filled = orden_detail[cons.ORDER][cons.STATUS] == cons.FILLED
                         if order_filled:
-                            crypto_log.info(f"order buy {id_compra} filled!")
+                            crypto_log.info("\n################################################"
+                                            f"\norder buy {id_compra} filled!"
+                                            "\n################################################"
+                                            "\n")
                             orden_filled_size = math.trunc(float(orden_detail[cons.ORDER][cons.FILLED_SIZE])
                                                            * 10 ** n_decim_size) / 10 ** n_decim_size
                             orden_filled_price = math.trunc(float(orden_detail[cons.ORDER][cons.AVERAGE_FILLED_PRICE])
@@ -395,7 +418,7 @@ if __name__ == "__main__":
                             crypto_log.info(orden_compra)
                             trigger = False
                             # BBDDs
-                            records_ultima_compra.insert({cons.ID_COMPRA_BBDD: id_compra,
+                            ultima_compra_records.insert({cons.ID_COMPRA_BBDD: id_compra,
                                                           cons.ID_COMPRA_USER_BBDD: id_compra_user,
                                                           cons.ORDEN_FILLED_SIZE: orden_filled_size,
                                                           cons.ORDEN_FILLED_PRICE: orden_filled_price,
@@ -404,11 +427,14 @@ if __name__ == "__main__":
                                                           cons.PORCENTAJE_BENEFICIO: porcentaje_beneficio,
                                                           cons.FECHA: datetime.datetime.now().isoformat(),
                                                           cons.TRAMO: tramo_actual[0]})
-                            crypto_log.info(records_ultima_compra.all())
+                            crypto_log.info(ultima_compra_records.all())
                             all_trades_records.insert(orden_compra[cons.RESPONSE])
                         else:
-                            crypto_log.info(f"The order with OrderID: {id_compra} was canceled by "
-                                            f"overtime of {param.T_COMPRA_LIMIT} seconds.")
+                            crypto_log.info("\n################################################"
+                                            f"\nThe order with OrderID: {id_compra} was canceled by "
+                                            f"overtime of {param.T_COMPRA_LIMIT} seconds."
+                                            "\n################################################"
+                                            "\n")
                 except Exception as e:
                     crypto_log.info(e)
                     pass
@@ -426,7 +452,7 @@ if __name__ == "__main__":
             #     stoptrigger = True
 
             # BUCLE PARA EJECUTAR TODAS LAS VENTAS SI SE DAN LAS CONDICIONES - PARA TODOS LOS TRAMOS
-            lista_last_buy_bbdd = records_ultima_compra.all()
+            lista_last_buy_bbdd = ultima_compra_records.all()
             lista_last_buy_tramo = []
             if not lista_last_buy_bbdd:
                 trigger = True
@@ -495,7 +521,10 @@ if __name__ == "__main__":
                                 orden_detail = client.get_order(order_id=id_venta)
                                 order_filled = orden_detail[cons.ORDER][cons.STATUS] == cons.FILLED
                             if order_filled:
-                                crypto_log.info(f"order sell {id_venta} filled!")
+                                crypto_log.info("\n################################################"
+                                                f"\norder sell {id_venta} filled!"
+                                                "\n################################################"
+                                                "\n")
                                 orden_filled_size = math.trunc(float(orden_detail[cons.ORDER][cons.FILLED_SIZE])
                                                                * 10 ** n_decim_size) / 10 ** n_decim_size
                                 orden_filled_price = math.trunc(
@@ -507,11 +536,14 @@ if __name__ == "__main__":
                                 crypto_log.info(orden_venta)
                                 trigger = True
                                 # BBDD
-                                records_ultima_compra.remove(where(cons.ID_COMPRA_BBDD) == id_compra_bbdd)
+                                ultima_compra_records.remove(where(cons.ID_COMPRA_BBDD) == id_compra_bbdd)
                                 all_trades_records.insert(orden_venta[cons.RESPONSE])
                             else:
-                                crypto_log.info(f"The order with OrderID: {id_venta} was canceled by "
-                                                f"overtime of {param.T_VENTA_LIMIT} seconds.")
+                                crypto_log.info("\n################################################"
+                                                f"\nThe order with OrderID: {id_venta} was canceled by "
+                                                f"overtime of {param.T_VENTA_LIMIT} seconds."
+                                                "\n################################################"
+                                                "\n")
                     except Exception as e:
                         crypto_log.info(e)
                         pass
@@ -532,25 +564,24 @@ if __name__ == "__main__":
                 crypto_log.info(f'Numero de ciclos: {contador_ciclos}')
                 crypto_log.info(f"La frecuencia deseada por ciclo es: {param.FREQ_EXEC} Hz.")
                 crypto_log.info(f"El tiempo real transcurrido por ciclo es: {t_ciclo_real} seg.")
-                crypto_log.info(f"El tiempo real medio transcurrido por ciclo es: {t_ciclo_real_medio} seg.")
+                crypto_log.info(f"El tiempo real medio transcurrido por ciclo es: {round(t_ciclo_real_medio, 4)} seg.")
                 crypto_log.info(f"El tiempo total transcurrido por ciclo es: {t_ciclo} seg.")
-                crypto_log.info(f"El tiempo total medio transcurrido por ciclo es: {t_ciclo_medio} seg.")
+                crypto_log.info(f"El tiempo total medio transcurrido por ciclo es: {round(t_ciclo_medio, 4)} seg.")
                 crypto_log.info(f"La pausa forzada por ciclo es: {t_pausa} seg.")
+
+            if contador_ciclos % param.TIME_PAUSAS_LOGS == 0:
+                crypto_log.info(f'phigh: {str(round(phigh, 5))} eur.')
+                crypto_log.info(f'plow: {str(round(plow, 5))} eur.')
+                crypto_log.info(f"Realtime_value buyer == precio_venta_bidask: {precio_venta_bidask} eur.")
+                crypto_log.info(f"Realtime_value seller == precio_compra_bidask: {precio_compra_bidask} eur.")
+                crypto_log.info(f'Max_value_in_last_{tiempo_caida}_seconds: {porcentaje_inst_tiempo_list[2]} eur.')
+                crypto_log.info(f'Dif_inst_max_%: {str(round(porcentaje_inst_tiempo * 100, 2))} %')
+                crypto_log.info(f'Dif_inst_max_eur: {round(porcentaje_inst_tiempo_list[3], n_decim_price)} eur.')
                 crypto_log.info(tramo_actual)
                 crypto_log.info(dicc_cond_compraventa)
                 crypto_log.info(f"condiciones_compra_total = {condiciones_compra_total}")
                 for item in range(len(lista_last_buy_bbdd)):
                     crypto_log.info(f"condiciones_venta_total = {condiciones_venta_list[item]}")
-
-            if contador_ciclos % param.TIME_PAUSAS_LOGS == 0:
-                crypto_log.info(f'Precio compra bidask: {precio_compra_bidask} eur.')
-                crypto_log.info(f'Precio venta bidask: {precio_venta_bidask} eur.')
-                crypto_log.info(f'phigh: {str(round(phigh, 5))} eur.')
-                crypto_log.info(f'plow: {str(round(plow, 5))} eur.')
-                crypto_log.info(f'Dif_inst_max_%: {str(round(porcentaje_inst_tiempo * 100, 2))} %')
-                crypto_log.info(f'Dif_inst_max_eur: {porcentaje_inst_tiempo_list[0]} eur.')
-                crypto_log.info(f'Realtime_value: {porcentaje_inst_tiempo_list[1]} eur.')
-                crypto_log.info(f'Max_value_in_last_{tiempo_caida}_seconds: {porcentaje_inst_tiempo_list[2]} eur.')
         except (KeyboardInterrupt, SystemExit):  # ctrl + c
             crypto_log.info('\n'
                             '############'

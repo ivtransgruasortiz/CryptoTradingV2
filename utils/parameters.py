@@ -10,6 +10,8 @@ PORCENTAJE_INST_TIEMPO = 0.0  # valor constante en caso de error
 
 API_URL = 'https =//api.coinbase.com/api/v3/brokerage/'
 
+TRIGGER_TWITTER = True  # Para activar/desactivar mandar twitts en twitter
+
 BTC_EUR = "BTC-EUR"
 ETH_EUR = "ETH-EUR"
 ADA_EUR = "ADA-EUR"
@@ -61,7 +63,6 @@ TIME_PERCEN_DICC = {"tiempo_caida_max": 18000,  # tiempo máximo de caida en seg
 # NUMMAX = 9999999  # Inicializacion listas
 # STOPLOSSMARKER = False  # Para activar el stoploss poner a True (le entra a la funcion stoploss para activarla)
 # STOPTRIGGER = False  # Para marcar si estamos en situación de stoploss y poder cambiar condiciones de compra y venta
-# TRIGGER_TWITTER = True  # Para activar/desactivar mandar twitts en twitter
 # PORCENTAJE_LIMITE_STOPLOSS = 0.2  # porcentaje de caída para stoploss - ideal 0.20
 # MARGENTRAMO = 0.05  # Margen limite alrededor de cada maximo
 # PAG_HISTORIC = 50  # paginas para contar hacia atras y reconstruir historico, cada pag son 100 resultados - ideal 50
