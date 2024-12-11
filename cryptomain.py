@@ -97,29 +97,35 @@ if __name__ == "__main__":
     # passphrase = Fernet.generate_key()
     # token_api_key = encrypt(api_key.encode(), passphrase.encode())
     # token_api_secret = encrypt(api_secret.encode(), passphrase.encode())
+    # token_x_key = encrypt(x_key.encode(), passphrase.encode())
+    # token_x_secret = encrypt(x_secret.encode(), passphrase.encode())
+    # token_x_access = encrypt(x_access.encode(), passphrase.encode())
+    # token_x_access_secret = encrypt(x_access_secret.encode(), passphrase.encode())
 
     # PARA DESCODIFICAR
     token_api_key = cred.token_api_key
     token_api_secret = cred.token_api_secret
+    # token_x_key = cred.token_x_key
+    # token_x_secret = cred.token_x_secret
+    # token_x_access = cred.token_x_access
+    # token_x_access_secret = cred.token_x_access_secret
     api_key = decrypt(token_api_key, passphrase.encode()).decode().replace("\\n", "\n")
     api_secret = decrypt(token_api_secret, passphrase.encode()).decode().replace("\\n", "\n")
+    # x_key = decrypt(token_x_key, passphrase.encode()).decode().replace("\\n", "\n")
+    # x_secret = decrypt(token_x_secret, passphrase.encode()).decode().replace("\\n", "\n")
+    # x_access = decrypt(token_x_access, passphrase.encode()).decode().replace("\\n", "\n")
+    # x_access_secret = decrypt(token_x_access_secret, passphrase.encode()).decode().replace("\\n", "\n")
 
     # # Twitter #############################################################################
-    # x_api_key = ""
-    # x_api_key_secret = ""
-    # x_acces_token = ""
-    # x_acces_token_secret = ""
-    #
     # client = tweepy.Client(
-    #     consumer_key=x_api_key, consumer_secret=x_api_key_secret,
-    #     access_token=x_acces_token, access_token_secret=x_acces_token_secret
+    #     consumer_key=x_key, consumer_secret=x_secret,
+    #     access_token=x_access, access_token_secret=x_access_secret
     # )
-    # message_twitter = f'Hi!! ivcryptotrading TEST ' \
+    # message_twitter = f'Hi!! ivcryptotrading TEST 3 ' \
     #                   f'@ivquantic'
     # response = client.create_tweet(
     #     text=f"{message_twitter}"
     # )
-    # response.values()
     # print(f"https://twitter.com/user/status/{response.data['id']}")
     # #######################################################################################
 
