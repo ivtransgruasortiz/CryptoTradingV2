@@ -34,14 +34,14 @@ FREQ_EXEC = 1  # frecuencia máxima de ejecución por ciclo Hz - ideal 0.5
 CONTADOR_CICLOS = 0  # contador de ciclos
 FACTOR_TAMANIO = 100  # factor por el que multiplicar el numero de ciclos para limitar tamanio listas
 
-N_RAPIDA_BIDS = 15  # intervalo para el calculo de la media rapida en los bids (compras) utilizado en nuestras ventas de cripto - ideal 15
-N_LENTA_BIDS = 60  # intervalo para el calculo de la media lenta en los bids (compras) utilizado en nuestras ventas de cripto - ideal 60
-N_RAPIDA_ASKS = 15  # intervalo para el calculo de la media rapida en los asks (ventas) utilizado en nuestras compras de cripto - 10
-N_LENTA_ASKS = 60  # intervalo para el calculo de la media lenta en los bids (ventas) utilizado en nuestras compras de cripto - 40
+N_RAPIDA_BIDS = 30  # intervalo para el calculo de la media rapida en los bids (compras) utilizado en nuestras ventas de cripto - ideal 15
+N_LENTA_BIDS = 90  # intervalo para el calculo de la media lenta en los bids (compras) utilizado en nuestras ventas de cripto - ideal 60
+N_RAPIDA_ASKS = 30  # intervalo para el calculo de la media rapida en los asks (ventas) utilizado en nuestras compras de cripto - 15
+N_LENTA_ASKS = 90  # intervalo para el calculo de la media lenta en los bids (ventas) utilizado en nuestras compras de cripto - 60
 N_MEDIA = 10  # Numero de valores para calcular la media en los porcetajes_variacion_tiempo
 
 TIME_PERCEN_DICC = {"tiempo_caida_max": 18000,  # tiempo máximo de caida en segundos - si estamos rozando maximos historicos - ideal 1800
-                    "porcentaje_caida_max": 0.06,  # porcentaje de caída minimo necesario para la compra - si estamos rozando maximos historicos - ideal = 0.06
+                    "porcentaje_caida_max": 0.05,  # porcentaje de caída minimo necesario para la compra - si estamos rozando maximos historicos - ideal = 0.06
                     "tiempo_caida_1": 18000,  # tiempo máximo de caida en segundos - ideal 120min = 7200seg
                     "porcentaje_caida_1": 0.04,  # porcentaje de caída minimo necesario para la compra - ideal 0.04
                     "tiempo_caida_2": 3600,  # tiempo máximo de caida en segundos - ideal 900
