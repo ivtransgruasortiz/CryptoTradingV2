@@ -567,7 +567,7 @@ if __name__ == "__main__":
                 crypto_log.info(f"El tiempo real medio transcurrido por ciclo es: {round(t_ciclo_real_medio, 4)} seg.")
                 crypto_log.info(f"El tiempo total transcurrido por ciclo es: {t_ciclo} seg.")
                 crypto_log.info(f"El tiempo total medio transcurrido por ciclo es: {round(t_ciclo_medio, 4)} seg.")
-                crypto_log.info(f"La pausa forzada por ciclo es: {t_pausa} seg.")
+                crypto_log.info(f"La pausa forzada por ciclo es: {round(t_pausa, 4)} seg.")
 
             if contador_ciclos % param.TIME_PAUSAS_LOGS == 0:
                 crypto_log.info(f'phigh: {str(round(phigh, 5))} eur.')
@@ -580,8 +580,10 @@ if __name__ == "__main__":
                 crypto_log.info(tramo_actual)
                 crypto_log.info(dicc_cond_compraventa)
                 crypto_log.info(f"condiciones_compra_total = {condiciones_compra_total}")
-                for item in range(len(lista_last_buy_bbdd)):
-                    crypto_log.info(f"condiciones_venta_total = {condiciones_venta_list[item]}")
+                i = 0
+                for item in lista_last_buy_bbdd:
+                    crypto_log.info(f"condiciones_venta_total = {condiciones_venta_list[i]}")
+                    i += 1
         except (KeyboardInterrupt, SystemExit):  # ctrl + c
             crypto_log.info('\n'
                             '############'
