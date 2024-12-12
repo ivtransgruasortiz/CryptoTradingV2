@@ -40,7 +40,7 @@ from utils.functions import Headers, get_accounts, get_accounts_sdk, disposicion
     historic_df_sdk, toma_1, fechas_time, df_medias_bids_asks, pintar_grafica, medias_exp, sma, tramo_inv, \
     encrypt, decrypt, fechas_time_utc, ema, limite_tamanio, limite_tamanio_df, trigger_list_last_buy, \
     bool_compras_previas, percentil, porcentaje_variacion_inst_tiempo, condiciones_buy_sell, buy_sell, random_name, \
-    stoploss, tiempo_pausa_new, on_message
+    stoploss, tiempo_pausa_new, on_message, automated_mail
 
 if __name__ == "__main__":
     # MANAGE LOGGING INFO-FILES
@@ -101,6 +101,8 @@ if __name__ == "__main__":
     # token_x_secret = encrypt(x_secret.encode(), passphrase.encode())
     # token_x_access = encrypt(x_access.encode(), passphrase.encode())
     # token_x_access_secret = encrypt(x_access_secret.encode(), passphrase.encode())
+    # token_gmail_user = encrypt(gmail_user.encode(), passphrase.encode())
+    # token_gmail_pass = encrypt(gmail_pass.encode(), passphrase.encode())
 
     # PARA DESCODIFICAR
     token_api_key = cred.token_api_key
@@ -109,14 +111,18 @@ if __name__ == "__main__":
     token_x_secret = cred.token_x_secret
     token_x_access = cred.token_x_access
     token_x_access_secret = cred.token_x_access_secret
+    token_gmail_user = cred.token_gmail_user
+    token_gmail_pass = cred.token_gmail_pass
     api_key = decrypt(token_api_key, passphrase.encode()).decode().replace("\\n", "\n")
     api_secret = decrypt(token_api_secret, passphrase.encode()).decode().replace("\\n", "\n")
     x_key = decrypt(token_x_key, passphrase.encode()).decode().replace("\\n", "\n")
     x_secret = decrypt(token_x_secret, passphrase.encode()).decode().replace("\\n", "\n")
     x_access = decrypt(token_x_access, passphrase.encode()).decode().replace("\\n", "\n")
     x_access_secret = decrypt(token_x_access_secret, passphrase.encode()).decode().replace("\\n", "\n")
+    gmail_user = decrypt(token_gmail_user, passphrase.encode()).decode().replace("\\n", "\n")
+    gmail_pass = decrypt(token_gmail_pass, passphrase.encode()).decode().replace("\\n", "\n")
 
-    # Twitter #############################################################################
+    # X-TWITTER #############################################################################
     client_x = tweepy.Client(
         consumer_key=x_key, consumer_secret=x_secret,
         access_token=x_access, access_token_secret=x_access_secret
@@ -128,6 +134,16 @@ if __name__ == "__main__":
     # )
     # print(f"https://twitter.com/user/status/{response.data['id']}")
     #######################################################################################
+
+    # # GMAIL #############################################################################
+    # subject_mail = 'CryptoTrading_v2.0 - PRUEBAS %s' % param.CRYPTO
+    # message_mail = 'Esto es un mensaje de pruebas para CRYPTOTRADING V2.0'
+    # smtp = "smtp.gmail.com"
+    # port = 587
+    # receivers = ["ivtransgruasortiz@gmail.com"]
+    # automated_mail(smtp, port, gmail_user, gmail_pass, receivers, receivers_cc=[], receivers_bcc=[], subject=subject_mail,
+    # message=message_mail, format='plain', files=[], mimetype="vnd.ms-excel")
+    # #######################################################################################
 
     ###########################
     # START REAL-TIME TRADING #
