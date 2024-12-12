@@ -2,8 +2,8 @@
 
 INVERSION_FIJA_EUR = 200  # cantidad en eur maximo por operación
 DELETE_LOGS = False
-TIME_PAUSAS_LOGS = 120
-TIME_CONDICIONES_COMPRAVENTA_LOGS = 120
+TIME_PAUSAS_LOGS = 600
+TIME_CONDICIONES_COMPRAVENTA_LOGS = 600
 T_COMPRA_LIMIT = 5  # seconds
 T_VENTA_LIMIT = 5  # seconds
 PORCENTAJE_INST_TIEMPO = 0.0  # valor constante en caso de error
@@ -11,6 +11,7 @@ PORCENTAJE_INST_TIEMPO = 0.0  # valor constante en caso de error
 API_URL = 'https =//api.coinbase.com/api/v3/brokerage/'
 
 TRIGGER_TWITTER = True  # Para activar/desactivar mandar twitts en twitter
+TRIGGER_GMAIL = True  # Para activar/desactivar mandar twitts en twitter
 
 BTC_EUR = "BTC-EUR"
 ETH_EUR = "ETH-EUR"
@@ -51,7 +52,7 @@ TIME_PERCEN_DICC = {"tiempo_caida_max": 18000,  # tiempo máximo de caida en seg
                     "tiempo_caida_stop": 7200,  # tiempo stop de caida en segundos - si estamos en situacion de stoploss
                     "porcentaje_caida_stop": 0.07,  # porcentaje de caída minimo necesario para la compra - si estamos en situacion de stoploss
                     "porcentaje_beneficio_max": 0.015,  # porcentaje mínimo de beneficio en situacion ideal - ideal 0.02
-                    "porcentaje_beneficio_min": 0.015  # porcentaje mínimo de beneficio en situacion extrema, para minimizar riesgo 0.015
+                    "porcentaje_beneficio_min": 0.012  # porcentaje mínimo de beneficio en situacion extrema, para minimizar riesgo 0.015
                     }
 
 # # OLD

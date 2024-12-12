@@ -71,6 +71,9 @@ TIEMPO_CAIDA_1 = "tiempo_caida_1"
 TIEMPO_CAIDA_2 = "tiempo_caida_2"
 FILLED = "FILLED"
 SUCCESS = "success"
+GMAIL_SMTP = "smtp.gmail.com"
+GMAIL_PORT = 587
+GMAIL_RECEIVERS = ["ivtransgruasortiz@gmail.com"]
 
 
 MAX_DICC = {BTC_EUR: 95000,

@@ -56,9 +56,6 @@ if __name__ == "__main__":
     file_handler = logging.FileHandler('cryptologs.log')
     file_handler.setFormatter(formatter)
     crypto_log.addHandler(file_handler)
-    # stdout_handler = logging.StreamHandler(sys.stdout)
-    # stdout_handler.setFormatter(formatter)
-    # crypto_log.addHandler(stdout_handler)
     crypto_log.info("START POINT!!")
 
     # PARA CAMBIAR EL COMPORTAMIENTO DE LOS PRINT -- SIN ESTA LÍNEA LOS ESCRIBE DEL TIRÓN...
@@ -127,6 +124,7 @@ if __name__ == "__main__":
         consumer_key=x_key, consumer_secret=x_secret,
         access_token=x_access, access_token_secret=x_access_secret
     )
+    # # EJEMPLO
     # message_twitter = f'Hi!! ivcryptotrading TEST 3 ' \
     #                   f'@ivquantic'
     # response = client_x.create_tweet(
@@ -136,13 +134,12 @@ if __name__ == "__main__":
     #######################################################################################
 
     # # GMAIL #############################################################################
+    # # EJEMPLO
     # subject_mail = 'CryptoTrading_v2.0 - PRUEBAS %s' % param.CRYPTO
     # message_mail = 'Esto es un mensaje de pruebas para CRYPTOTRADING V2.0'
-    # smtp = "smtp.gmail.com"
-    # port = 587
-    # receivers = ["ivtransgruasortiz@gmail.com"]
-    # automated_mail(smtp, port, gmail_user, gmail_pass, receivers, receivers_cc=[], receivers_bcc=[], subject=subject_mail,
-    # message=message_mail, format='plain', files=[], mimetype="vnd.ms-excel")
+    # automated_mail(cons.GMAIL_SMTP, cons.GMAIL_PORT, gmail_user, gmail_pass, cons.GMAIL_RECEIVERS, receivers_cc=[],
+    #                receivers_bcc=[], subject=subject_mail, message=message_mail, format='plain', files=[],
+    #                mimetype="vnd.ms-excel")
     # #######################################################################################
 
     ###########################
@@ -452,8 +449,8 @@ if __name__ == "__main__":
                                                           cons.TRAMO: tramo_actual[0]})
                             crypto_log.info(ultima_compra_records.all())
                             all_trades_records.insert(orden_compra[cons.RESPONSE])
-                            # twitter
-                            message_twitter = f'Hi!! ivcryptotrading BOT has bought {param.INVERSION_FIJA_EUR} ' \
+                            # TWITTER
+                            message_twitter = f'Hi!! ivcryptotrading_v2.0 BOT has bought {param.INVERSION_FIJA_EUR} ' \
                                               f'eur in {orden_buy_filled_size} {crypto_short} at a price ' \
                                               f'{orden_buy_filled_price} ' \
                                               f'eur/{crypto_short} #crypto ' \
@@ -464,6 +461,20 @@ if __name__ == "__main__":
                                     text=f"{message_twitter}"
                                 )
                                 crypto_log.info(f"\nhttps://twitter.com/user/status/{response.data['id']}\n")
+                            # GMAIL
+                            subject_mail = f'ivcryptoTrading_v2.0 BOT - {cons.BUY.upper()}: {param.CRYPTO}'
+                            message_mail = f'Hi!! ivcryptotrading_v2.0 BOT has bought {param.INVERSION_FIJA_EUR} ' \
+                                           f'eur in {orden_buy_filled_size} {crypto_short} at a price ' \
+                                           f'{orden_buy_filled_price} ' \
+                                           f'eur/{crypto_short} - Tramo: {tramo_actual} - ' \
+                                           f'order_detail:{orden_buy_detail}'
+                            if param.TRIGGER_GMAIL:
+                                automated_mail(cons.GMAIL_SMTP, cons.GMAIL_PORT, gmail_user, gmail_pass,
+                                               cons.GMAIL_RECEIVERS, receivers_cc=[],
+                                               receivers_bcc=[], subject=subject_mail, message=message_mail,
+                                               format='plain',
+                                               files=[],
+                                               mimetype="vnd.ms-excel")
                         else:
                             crypto_log.info("\n################################################"
                                             f"\nThe order with OrderID: {id_compra} was canceled by "
@@ -581,7 +592,7 @@ if __name__ == "__main__":
                                 ultima_compra_records.remove(where(cons.ID_COMPRA_BBDD) == id_compra_bbdd)
                                 all_trades_records.insert(orden_venta[cons.RESPONSE])
                                 # twitter
-                                message_twitter = f'Hi!! ivcryptotrading BOT has sold {orden_sell_filled_size} ' \
+                                message_twitter = f'Hi!! ivcryptotrading_v2.0 BOT has sold {orden_sell_filled_size} ' \
                                                   f'{crypto_short} at a price {orden_sell_filled_price} ' \
                                                   f'eur/{crypto_short} with ' \
                                                   f'about {beneficio_neto} eur of profit!! #crypto  ' \
@@ -592,6 +603,20 @@ if __name__ == "__main__":
                                         text=f"{message_twitter}"
                                     )
                                     crypto_log.info(f"\nhttps://twitter.com/user/status/{response.data['id']}\n")
+                                # GMAIL
+                                subject_mail = f'ivcryptoTrading_v2.0 BOT - {cons.SELL.upper()}: {param.CRYPTO}'
+                                message_mail = f'Hi!! ivcryptotrading_v2.0 BOT has sold {orden_sell_filled_size} ' \
+                                               f'{crypto_short} at a price {orden_sell_filled_price} ' \
+                                               f'eur/{crypto_short} with ' \
+                                               f'about {beneficio_neto} eur of profit!! ' \
+                                               f'- Tramo: {tramo_actual} - order_detail:{orden_sell_detail}'
+                                if param.TRIGGER_GMAIL:
+                                    automated_mail(cons.GMAIL_SMTP, cons.GMAIL_PORT, gmail_user, gmail_pass,
+                                                   cons.GMAIL_RECEIVERS, receivers_cc=[],
+                                                   receivers_bcc=[], subject=subject_mail, message=message_mail,
+                                                   format='plain',
+                                                   files=[],
+                                                   mimetype="vnd.ms-excel")
                             else:
                                 crypto_log.info("\n################################################"
                                                 f"\nThe order with OrderID: {id_venta} was canceled by "
