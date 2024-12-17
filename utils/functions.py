@@ -5,8 +5,14 @@ import random
 import secrets
 import smtplib
 import time
+
+from email import encoders
+from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.mime.application import MIMEApplication
+from pathlib import Path
+
 from string import ascii_lowercase
 
 import dateutil.parser

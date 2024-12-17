@@ -40,7 +40,7 @@ from utils.functions import Headers, get_accounts, get_accounts_sdk, disposicion
     historic_df_sdk, toma_1, fechas_time, df_medias_bids_asks, pintar_grafica, medias_exp, sma, tramo_inv, \
     encrypt, decrypt, fechas_time_utc, ema, limite_tamanio, limite_tamanio_df, trigger_list_last_buy, \
     bool_compras_previas, percentil, porcentaje_variacion_inst_tiempo, condiciones_buy_sell, buy_sell, random_name, \
-    stoploss, tiempo_pausa_new, on_message
+    stoploss, tiempo_pausa_new, on_message, automated_mail
 
 if __name__ == "__main__":
     # MANAGE LOGGING INFO-FILES
@@ -56,9 +56,6 @@ if __name__ == "__main__":
     file_handler = logging.FileHandler('cryptologs.log')
     file_handler.setFormatter(formatter)
     crypto_log.addHandler(file_handler)
-    # stdout_handler = logging.StreamHandler(sys.stdout)
-    # stdout_handler.setFormatter(formatter)
-    # crypto_log.addHandler(stdout_handler)
     crypto_log.info("START POINT!!")
 
     # PARA CAMBIAR EL COMPORTAMIENTO DE LOS PRINT -- SIN ESTA LÍNEA LOS ESCRIBE DEL TIRÓN...
@@ -97,30 +94,52 @@ if __name__ == "__main__":
     # passphrase = Fernet.generate_key()
     # token_api_key = encrypt(api_key.encode(), passphrase.encode())
     # token_api_secret = encrypt(api_secret.encode(), passphrase.encode())
+    # token_x_key = encrypt(x_key.encode(), passphrase.encode())
+    # token_x_secret = encrypt(x_secret.encode(), passphrase.encode())
+    # token_x_access = encrypt(x_access.encode(), passphrase.encode())
+    # token_x_access_secret = encrypt(x_access_secret.encode(), passphrase.encode())
+    # token_gmail_user = encrypt(gmail_user.encode(), passphrase.encode())
+    # token_gmail_pass = encrypt(gmail_pass.encode(), passphrase.encode())
 
     # PARA DESCODIFICAR
     token_api_key = cred.token_api_key
     token_api_secret = cred.token_api_secret
+    token_x_key = cred.token_x_key
+    token_x_secret = cred.token_x_secret
+    token_x_access = cred.token_x_access
+    token_x_access_secret = cred.token_x_access_secret
+    token_gmail_user = cred.token_gmail_user
+    token_gmail_pass = cred.token_gmail_pass
     api_key = decrypt(token_api_key, passphrase.encode()).decode().replace("\\n", "\n")
     api_secret = decrypt(token_api_secret, passphrase.encode()).decode().replace("\\n", "\n")
+    x_key = decrypt(token_x_key, passphrase.encode()).decode().replace("\\n", "\n")
+    x_secret = decrypt(token_x_secret, passphrase.encode()).decode().replace("\\n", "\n")
+    x_access = decrypt(token_x_access, passphrase.encode()).decode().replace("\\n", "\n")
+    x_access_secret = decrypt(token_x_access_secret, passphrase.encode()).decode().replace("\\n", "\n")
+    gmail_user = decrypt(token_gmail_user, passphrase.encode()).decode().replace("\\n", "\n")
+    gmail_pass = decrypt(token_gmail_pass, passphrase.encode()).decode().replace("\\n", "\n")
 
-    # # Twitter #############################################################################
-    # x_api_key = ""
-    # x_api_key_secret = ""
-    # x_acces_token = ""
-    # x_acces_token_secret = ""
-    #
-    # client = tweepy.Client(
-    #     consumer_key=x_api_key, consumer_secret=x_api_key_secret,
-    #     access_token=x_acces_token, access_token_secret=x_acces_token_secret
-    # )
-    # message_twitter = f'Hi!! ivcryptotrading TEST ' \
+    # X-TWITTER #############################################################################
+    client_x = tweepy.Client(
+        consumer_key=x_key, consumer_secret=x_secret,
+        access_token=x_access, access_token_secret=x_access_secret
+    )
+    # # EJEMPLO
+    # message_twitter = f'Hi!! ivcryptotrading TEST 3 ' \
     #                   f'@ivquantic'
-    # response = client.create_tweet(
+    # response = client_x.create_tweet(
     #     text=f"{message_twitter}"
     # )
-    # response.values()
     # print(f"https://twitter.com/user/status/{response.data['id']}")
+    #######################################################################################
+
+    # # GMAIL #############################################################################
+    # # EJEMPLO
+    # subject_mail = 'CryptoTrading_v2.0 - PRUEBAS %s' % param.CRYPTO
+    # message_mail = 'Esto es un mensaje de pruebas para CRYPTOTRADING V2.0'
+    # automated_mail(cons.GMAIL_SMTP, cons.GMAIL_PORT, gmail_user, gmail_pass, cons.GMAIL_RECEIVERS, receivers_cc=[],
+    #                receivers_bcc=[], subject=subject_mail, message=message_mail, format='plain', files=[],
+    #                mimetype="vnd.ms-excel")
     # #######################################################################################
 
     ###########################
@@ -318,7 +337,7 @@ if __name__ == "__main__":
             last_buy_trigg = trigger_list_last_buy(ultima_compra_records)
             lista_last_buy = last_buy_trigg[0]
             lista_last_sell = last_buy_trigg[1]
-            orden_filled_size = last_buy_trigg[2]
+            orden_buy_filled_size = last_buy_trigg[2]
             trigger = last_buy_trigg[3]
 
             # AJUSTES DE LOS PARÁMETROS CONDICIONALES DE PORCENTAJE DE CAIDA Y TIEMPOS DE CAIDA
@@ -391,9 +410,9 @@ if __name__ == "__main__":
                     if orden_compra[cons.SUCCESS]:
                         id_compra = orden_compra[cons.RESPONSE][cons.ORDER_ID]
                         id_compra_user = orden_compra[cons.RESPONSE][cons.CLIENT_ORDER_ID]
-                        order_filled = False
+                        order_buy_filled = False
                         tb0 = time.perf_counter()
-                        while not order_filled:
+                        while not order_buy_filled:
                             tb1 = time.perf_counter() - tb0
                             if tb1 > param.T_COMPRA_LIMIT:
                                 client = RESTClient(api_key=api_key, api_secret=api_secret)
@@ -401,34 +420,61 @@ if __name__ == "__main__":
                                 break
                             time.sleep(1)
                             client = RESTClient(api_key=api_key, api_secret=api_secret)
-                            orden_detail = client.get_order(order_id=id_compra)
-                            order_filled = orden_detail[cons.ORDER][cons.STATUS] == cons.FILLED
-                        if order_filled:
+                            orden_buy_detail = client.get_order(order_id=id_compra)
+                            order_buy_filled = orden_buy_detail[cons.ORDER][cons.STATUS] == cons.FILLED
+                        if order_buy_filled:
                             crypto_log.info("\n################################################"
                                             f"\norder buy {id_compra} filled!"
                                             "\n################################################"
                                             "\n")
-                            orden_filled_size = math.trunc(float(orden_detail[cons.ORDER][cons.FILLED_SIZE])
-                                                           * 10 ** n_decim_size) / 10 ** n_decim_size
-                            orden_filled_price = math.trunc(float(orden_detail[cons.ORDER][cons.AVERAGE_FILLED_PRICE])
-                                                            * 10 ** n_decim_price) / 10 ** n_decim_price
-                            orden_fees = math.trunc(float(orden_detail[cons.ORDER][cons.TOTAL_FEES])
-                                                    * 10 ** n_decim_price) / 10 ** n_decim_price
-                            lista_last_buy.append(orden_filled_price)
+                            orden_buy_filled_size = math.trunc(float(orden_buy_detail[cons.ORDER][cons.FILLED_SIZE])
+                                                               * 10 ** n_decim_size) / 10 ** n_decim_size
+                            orden_buy_filled_price = math.trunc(float(orden_buy_detail[cons.ORDER]
+                                                                      [cons.AVERAGE_FILLED_PRICE])
+                                                                * 10 ** n_decim_price) / 10 ** n_decim_price
+                            orden_buy_fees = math.trunc(float(orden_buy_detail[cons.ORDER][cons.TOTAL_FEES])
+                                                        * 10 ** n_decim_price) / 10 ** n_decim_price
+                            lista_last_buy.append(orden_buy_filled_price)
                             crypto_log.info(orden_compra)
                             trigger = False
                             # BBDDs
                             ultima_compra_records.insert({cons.ID_COMPRA_BBDD: id_compra,
                                                           cons.ID_COMPRA_USER_BBDD: id_compra_user,
-                                                          cons.ORDEN_FILLED_SIZE: orden_filled_size,
-                                                          cons.ORDEN_FILLED_PRICE: orden_filled_price,
-                                                          cons.FEES_EUR_COMPRA: orden_fees,
+                                                          cons.ORDEN_FILLED_SIZE: orden_buy_filled_size,
+                                                          cons.ORDEN_FILLED_PRICE: orden_buy_filled_price,
+                                                          cons.FEES_EUR_COMPRA: orden_buy_fees,
                                                           cons.FEES_CLIENT: fees_client,
                                                           cons.PORCENTAJE_BENEFICIO: porcentaje_beneficio,
                                                           cons.FECHA: datetime.datetime.now().isoformat(),
                                                           cons.TRAMO: tramo_actual[0]})
                             crypto_log.info(ultima_compra_records.all())
                             all_trades_records.insert(orden_compra[cons.RESPONSE])
+                            # TWITTER
+                            message_twitter = f'Hi!! ivcryptotrading_v2.0 BOT has bought {param.INVERSION_FIJA_EUR} ' \
+                                              f'eur in {orden_buy_filled_size} {crypto_short} at a price ' \
+                                              f'{orden_buy_filled_price} ' \
+                                              f'eur/{crypto_short} #crypto ' \
+                                              f'@ivquantic @coinbase @bit2me @elonmusk ' \
+                                              f'@healthy_pockets @wallstwolverine @realDonaldTrump'
+                            if param.TRIGGER_TWITTER:
+                                response = client_x.create_tweet(
+                                    text=f"{message_twitter}"
+                                )
+                                crypto_log.info(f"\nhttps://twitter.com/user/status/{response.data['id']}\n")
+                            # GMAIL
+                            subject_mail = f'ivcryptoTrading_v2.0 BOT - {cons.BUY.upper()}: {param.CRYPTO}'
+                            message_mail = f'Hi!! ivcryptotrading_v2.0 BOT has bought {param.INVERSION_FIJA_EUR} ' \
+                                           f'eur in {orden_buy_filled_size} {crypto_short} at a price ' \
+                                           f'{orden_buy_filled_price} ' \
+                                           f'eur/{crypto_short} - Tramo: {tramo_actual} - ' \
+                                           f'order_detail:{orden_buy_detail}'
+                            if param.TRIGGER_GMAIL:
+                                automated_mail(cons.GMAIL_SMTP, cons.GMAIL_PORT, gmail_user, gmail_pass,
+                                               cons.GMAIL_RECEIVERS, receivers_cc=[],
+                                               receivers_bcc=[], subject=subject_mail, message=message_mail,
+                                               format='plain',
+                                               files=[],
+                                               mimetype="vnd.ms-excel")
                         else:
                             crypto_log.info("\n################################################"
                                             f"\nThe order with OrderID: {id_compra} was canceled by "
@@ -461,15 +507,17 @@ if __name__ == "__main__":
                 try:
                     trigger = False
                     id_compra_bbdd = compra[cons.ID_COMPRA_BBDD]
-                    orden_filled_size = compra[cons.ORDEN_FILLED_SIZE]
-                    orden_filled_price = compra[cons.ORDEN_FILLED_PRICE]
+                    orden_buy_filled_size = compra[cons.ORDEN_FILLED_SIZE]
+                    orden_buy_filled_price = compra[cons.ORDEN_FILLED_PRICE]
+                    orden_buy_fees = compra[cons.FEES_EUR_COMPRA]
                     porcentaje_beneficio = compra[cons.PORCENTAJE_BENEFICIO]
                     tramo_actual_compra = compra[cons.TRAMO]
                 except Exception as e:
                     trigger = True
                     id_compra_bbdd = None
-                    orden_filled_size = None
-                    orden_filled_price = None
+                    orden_buy_filled_size = None
+                    orden_buy_filled_price = None
+                    orden_buy_fees = None
                     porcentaje_beneficio = None
                     tramo_actual_compra = None
                     crypto_log.info('Error lectura bbdd')
@@ -503,14 +551,14 @@ if __name__ == "__main__":
                                                api_secret,
                                                n_decim_price,
                                                n_decim_size,
-                                               sizefunds=orden_filled_size,
+                                               sizefunds=orden_buy_filled_size,
                                                price_bidask=precio_venta_limit)  # LIMIT SELL
                         if orden_venta[cons.SUCCESS]:
                             id_venta = orden_venta[cons.RESPONSE][cons.ORDER_ID]
                             id_venta_user = orden_venta[cons.RESPONSE][cons.CLIENT_ORDER_ID]
-                            order_filled = False
+                            order_sell_filled = False
                             ts0 = time.perf_counter()
-                            while not order_filled:
+                            while not order_sell_filled:
                                 ts1 = time.perf_counter() - ts0
                                 if ts1 > param.T_VENTA_LIMIT:
                                     client = RESTClient(api_key=api_key, api_secret=api_secret)
@@ -518,26 +566,57 @@ if __name__ == "__main__":
                                     break
                                 time.sleep(1)
                                 client = RESTClient(api_key=api_key, api_secret=api_secret)
-                                orden_detail = client.get_order(order_id=id_venta)
-                                order_filled = orden_detail[cons.ORDER][cons.STATUS] == cons.FILLED
-                            if order_filled:
+                                orden_sell_detail = client.get_order(order_id=id_venta)
+                                order_sell_filled = orden_sell_detail[cons.ORDER][cons.STATUS] == cons.FILLED
+                            if order_sell_filled:
                                 crypto_log.info("\n################################################"
                                                 f"\norder sell {id_venta} filled!"
                                                 "\n################################################"
                                                 "\n")
-                                orden_filled_size = math.trunc(float(orden_detail[cons.ORDER][cons.FILLED_SIZE])
-                                                               * 10 ** n_decim_size) / 10 ** n_decim_size
-                                orden_filled_price = math.trunc(
-                                    float(orden_detail[cons.ORDER][cons.AVERAGE_FILLED_PRICE])
+                                orden_sell_filled_size = math.trunc(
+                                    float(orden_sell_detail[cons.ORDER][cons.FILLED_SIZE])
+                                    * 10 ** n_decim_size) / 10 ** n_decim_size
+                                orden_sell_filled_price = math.trunc(
+                                    float(orden_sell_detail[cons.ORDER][cons.AVERAGE_FILLED_PRICE])
                                     * 10 ** n_decim_price) / 10 ** n_decim_price
-                                orden_fees = math.trunc(float(orden_detail[cons.ORDER][cons.TOTAL_FEES])
-                                                        * 10 ** n_decim_price) / 10 ** n_decim_price
-                                lista_last_sell.append(orden_filled_price)
+                                orden_sell_fees = math.trunc(float(orden_sell_detail[cons.ORDER][cons.TOTAL_FEES])
+                                                             * 10 ** n_decim_price) / 10 ** n_decim_price
+                                beneficio_neto = round(orden_sell_filled_size * orden_sell_filled_price -
+                                                       orden_buy_filled_size * orden_buy_filled_price -
+                                                       orden_buy_fees -
+                                                       orden_sell_fees, n_decim_price)
+                                lista_last_sell.append(orden_sell_filled_price)
                                 crypto_log.info(orden_venta)
                                 trigger = True
                                 # BBDD
                                 ultima_compra_records.remove(where(cons.ID_COMPRA_BBDD) == id_compra_bbdd)
                                 all_trades_records.insert(orden_venta[cons.RESPONSE])
+                                # twitter
+                                message_twitter = f'Hi!! ivcryptotrading_v2.0 BOT has sold {orden_sell_filled_size} ' \
+                                                  f'{crypto_short} at a price {orden_sell_filled_price} ' \
+                                                  f'eur/{crypto_short} with ' \
+                                                  f'about {beneficio_neto} eur of profit!! #crypto  ' \
+                                                  f'@ivquantic @coinbase @bit2me @elonmusk ' \
+                                                  f'@healthy_pockets @wallstwolverine @realDonaldTrump'
+                                if param.TRIGGER_TWITTER:
+                                    response = client_x.create_tweet(
+                                        text=f"{message_twitter}"
+                                    )
+                                    crypto_log.info(f"\nhttps://twitter.com/user/status/{response.data['id']}\n")
+                                # GMAIL
+                                subject_mail = f'ivcryptoTrading_v2.0 BOT - {cons.SELL.upper()}: {param.CRYPTO}'
+                                message_mail = f'Hi!! ivcryptotrading_v2.0 BOT has sold {orden_sell_filled_size} ' \
+                                               f'{crypto_short} at a price {orden_sell_filled_price} ' \
+                                               f'eur/{crypto_short} with ' \
+                                               f'about {beneficio_neto} eur of profit!! ' \
+                                               f'- Tramo: {tramo_actual} - order_detail:{orden_sell_detail}'
+                                if param.TRIGGER_GMAIL:
+                                    automated_mail(cons.GMAIL_SMTP, cons.GMAIL_PORT, gmail_user, gmail_pass,
+                                                   cons.GMAIL_RECEIVERS, receivers_cc=[],
+                                                   receivers_bcc=[], subject=subject_mail, message=message_mail,
+                                                   format='plain',
+                                                   files=[],
+                                                   mimetype="vnd.ms-excel")
                             else:
                                 crypto_log.info("\n################################################"
                                                 f"\nThe order with OrderID: {id_venta} was canceled by "
@@ -567,7 +646,7 @@ if __name__ == "__main__":
                 crypto_log.info(f"El tiempo real medio transcurrido por ciclo es: {round(t_ciclo_real_medio, 4)} seg.")
                 crypto_log.info(f"El tiempo total transcurrido por ciclo es: {t_ciclo} seg.")
                 crypto_log.info(f"El tiempo total medio transcurrido por ciclo es: {round(t_ciclo_medio, 4)} seg.")
-                crypto_log.info(f"La pausa forzada por ciclo es: {t_pausa} seg.")
+                crypto_log.info(f"La pausa forzada por ciclo es: {round(t_pausa, 4)} seg.")
 
             if contador_ciclos % param.TIME_PAUSAS_LOGS == 0:
                 crypto_log.info(f'phigh: {str(round(phigh, 5))} eur.')
@@ -580,8 +659,10 @@ if __name__ == "__main__":
                 crypto_log.info(tramo_actual)
                 crypto_log.info(dicc_cond_compraventa)
                 crypto_log.info(f"condiciones_compra_total = {condiciones_compra_total}")
-                for item in range(len(lista_last_buy_bbdd)):
-                    crypto_log.info(f"condiciones_venta_total = {condiciones_venta_list[item]}")
+                i = 0
+                for item in lista_last_buy_bbdd:
+                    crypto_log.info(f"condiciones_venta_total = {condiciones_venta_list[i]}")
+                    i += 1
         except (KeyboardInterrupt, SystemExit):  # ctrl + c
             crypto_log.info('\n'
                             '############'
